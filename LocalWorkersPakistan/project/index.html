@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Local Workers Pakistan - SQLite Powered</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loader" class="loader-overlay" style="display: flex;">
+        <div class="loader-content glass">
+            <div class="spinner"></div>
+            <div class="loader-text">Initializing database...</div>
+        </div>
+    </div>
+
+    <div class="bg-animation">
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <!-- City Modal -->
+    <div id="cityModal" class="modal active">
+        <div class="modal-content glass">
+            <div class="project-title">
+                <h1>🔧 Local Workers Pakistan</h1>
+                <p class="tagline">Find Skilled Workers Near You</p>
+                <div class="database-status">
+                    <span class="status-badge">🗄️ SQLite Powered</span>
+                </div>
+            </div>
+            <h2>🏙️ Select Your City</h2>
+            <p>Find skilled workers near you</p>
+            <select id="citySelect" class="city-select">
+                <option value="">Choose your city</option>
+                <option value="Karachi">🏙️ Karachi</option>
+                <option value="Lahore">🏛️ Lahore</option>
+                <option value="Faisalabad">🏢 Faisalabad</option>
+                <option value="Rawalpindi">🏗️ Rawalpindi</option>
+                <option value="Sialkot">🏭 Sialkot</option>
+            </select>
+            <button id="confirmCity" class="btn-3d">Continue</button>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="main-app">
+        <header class="header glass">
+            <h1 class="logo">🔧 Local Workers</h1>
+            <div class="header-info">
+                <span id="selectedCity" class="city-badge"></span>
+                <button id="changeCity" class="btn-glass">Change</button>
+                <button id="exportData" class="btn-glass" onclick="exportData()">📥 Export</button>
+            </div>
+        </header>
+
+        <nav class="nav-tabs glass">
+            <button class="tab-btn active" data-category="plumber">🔧 Plumbers</button>
+            <button class="tab-btn" data-category="welder">⚡ Welders</button>
+            <button class="tab-btn" data-category="carpenter">🔨 Carpenters</button>
+        </nav>
+
+        <main class="main-content">
+            <div class="section-header">
+                <h2 id="sectionTitle">Available Plumbers</h2>
+                <button id="addWorkerBtn" class="btn-add">+ Add Yourself</button>
+            </div>
+            <div id="workersGrid" class="workers-grid"></div>
+        </main>
+
+        <!-- Worker Modal -->
+        <div id="workerModal" class="modal">
+            <div class="modal-content glass worker-details">
+                <button class="modal-close">×</button>
+                <div class="worker-avatar-3d">
+                    <span id="workerInitials"></span>
+                </div>
+                <h3 id="workerName"></h3>
+                <div class="worker-info-3d">
+                    <div class="info-card glass">
+                        <span>Age</span>
+                        <span id="workerAge"></span>
+                    </div>
+                    <div class="info-card glass">
+                        <span>Experience</span>
+                        <span id="workerExp"></span>
+                    </div>
+                    <div class="info-card glass">
+                        <span>City</span>
+                        <span id="workerCity"></span>
+                    </div>
+                </div>
+                <a id="contactBtn" class="btn-3d contact-btn">📞 Call Now</a>
+                <button id="feedbackBtn" class="btn-glass">⭐ Rate Service</button>
+            </div>
+        </div>
+
+        <!-- Register Modal -->
+        <div id="registerModal" class="modal">
+            <div class="modal-content glass register-form">
+                <button class="modal-close">×</button>
+                <h2>👷 Register as Worker</h2>
+                <p class="form-description">Join our SQLite-powered platform to offer your services to customers in your area</p>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="regName">Full Name</label>
+                        <input type="text" id="regName" placeholder="Enter your full name" class="glass-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regAge">Age</label>
+                        <input type="number" id="regAge" placeholder="Enter your age" class="glass-input" required min="18" max="70">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regExp">Years of Experience</label>
+                        <input type="number" id="regExp" placeholder="Enter years of experience" class="glass-input" required min="0" max="50">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regPhone">Phone Number</label>
+                        <input type="tel" id="regPhone" placeholder="03xxxxxxxxx" class="glass-input" required pattern="03[0-9]{9}">
+                        <small class="form-help">Must be 11 digits starting with 03</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regCategory">Service Category</label>
+                        <select id="regCategory" class="glass-input" required>
+                            <option value="">Choose your category</option>
+                            <option value="plumber">🔧 Plumber</option>
+                            <option value="welder">⚡ Welder</option>
+                            <option value="carpenter">🔨 Carpenter</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regCity">City</label>
+                        <select id="regCity" class="glass-input" required>
+                            <option value="">Choose your city</option>
+                            <option value="Karachi">🏙️ Karachi</option>
+                            <option value="Lahore">🏛️ Lahore</option>
+                            <option value="Faisalabad">🏢 Faisalabad</option>
+                            <option value="Rawalpindi">🏗️ Rawalpindi</option>
+                            <option value="Sialkot">🏭 Sialkot</option>
+                        </select>
+                    </div>
+                    
+                    <div class="database-info">
+                        <small>✅ All data securely stored in SQLite database</small>
+                    </div>
+                    
+                    <button type="submit" class="btn-3d register-submit">✅ Register Now</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Feedback Modal -->
+        <div id="feedbackModal" class="modal">
+            <div class="modal-content glass">
+                <button class="modal-close">×</button>
+                <h2>⭐ Rate Experience</h2>
+                <p class="feedback-description">Rate your experience with <span id="feedbackWorkerName"></span></p>
+                <div class="stars-3d">
+                    <span class="star-3d" data-rating="1">★</span>
+                    <span class="star-3d" data-rating="2">★</span>
+                    <span class="star-3d" data-rating="3">★</span>
+                    <span class="star-3d" data-rating="4">★</span>
+                    <span class="star-3d" data-rating="5">★</span>
+                </div>
+                <div class="rating-label">
+                    <span id="ratingText">Select rating</span>
+                </div>
+                <textarea id="feedbackText" placeholder="Share your experience (optional)..." class="glass-input"></textarea>
+                <div class="database-info">
+                    <small>✅ Feedback stored permanently in database</small>
+                </div>
+                <button id="submitFeedback" class="btn-3d" disabled>Submit Rating</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load SQL.js library -->
+    <script src="https://sql.js.org/dist/sql-wasm.js"></script>
+    <!-- Load main application as ES module -->
+    <script type="module" src="main.js"></script>
+</body>
+</html>
