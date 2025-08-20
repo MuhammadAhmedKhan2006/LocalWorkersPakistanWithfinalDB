@@ -28,6 +28,7 @@ const workerExp = document.getElementById('workerExp');
 const workerCity = document.getElementById('workerCity');
 const contactBtn = document.getElementById('contactBtn');
 const feedbackBtn = document.getElementById('feedbackBtn');
+const deleteWorkerBtn = document.getElementById('deleteWorkerBtn');
 const registerForm = document.getElementById('registerForm');
 const stars = document.querySelectorAll('.star-3d');
 const feedbackText = document.getElementById('feedbackText');
@@ -149,6 +150,27 @@ function setupEventListeners() {
             feedbackModal.classList.add('active');
         }
     };
+
+    // Delete worker
+    if (deleteWorkerBtn) {
+        deleteWorkerBtn.onclick = async () => {
+            if (!selectedWorker) return;
+            const confirmed = confirm(`Are you sure you want to delete ${selectedWorker.name}? This cannot be undone.`);
+            if (!confirmed) return;
+            try {
+                showLoadingState('Deleting profile...');
+                await db.deleteWorker(selectedWorker.id);
+                hideLoadingState();
+                workerModal.classList.remove('active');
+                showNotification('✅ Profile deleted');
+                await renderWorkers();
+            } catch (error) {
+                hideLoadingState();
+                console.error('❌ Error deleting worker:', error);
+                showNotification('❌ Failed to delete profile');
+            }
+        };
+    }
 
     // Modal close buttons
     document.querySelectorAll('.modal-close').forEach(btn => {

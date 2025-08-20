@@ -91,6 +91,18 @@ class WorkersDatabase {
             if (!this.isLocalStorage && this.db) {
                 const data = this.db.export();
                 localStorage.setItem('workers_db_sqlite', JSON.stringify(Array.from(data)));
+
+                // Also persist a JSON mirror so fallback mode can load user data
+                try {
+                    const workersResult = this.db.exec("SELECT * FROM workers");
+                    const feedbackResult = this.db.exec("SELECT * FROM feedback");
+                    const workersJson = workersResult.length > 0 ? this.formatExportData(workersResult[0]) : [];
+                    const feedbackJson = feedbackResult.length > 0 ? this.formatExportData(feedbackResult[0]) : [];
+                    localStorage.setItem('workers', JSON.stringify(workersJson));
+                    localStorage.setItem('feedback', JSON.stringify(feedbackJson));
+                } catch (mirrorError) {
+                    console.warn('⚠️ Failed to write JSON mirror for fallback:', mirrorError);
+                }
             } else if (this.isLocalStorage) {
                 this.saveToLocalStorage();
             }
@@ -427,6 +439,34 @@ class WorkersDatabase {
         } catch (error) {
             console.error('❌ Error getting worker feedback:', error);
             return [];
+        }
+    }
+
+    // Delete worker and associated feedback
+    async deleteWorker(workerId) {
+        try {
+            if (this.isLocalStorage) {
+                this.db.feedback = this.db.feedback.filter(f => f.worker_id != workerId);
+                this.db.workers = this.db.workers.filter(w => w.id != workerId);
+                this.saveToLocalStorage();
+                return true;
+            }
+
+            // Explicitly delete feedback first, then worker
+            const delFeedback = this.db.prepare("DELETE FROM feedback WHERE worker_id = ?");
+            delFeedback.run([workerId]);
+            delFeedback.free();
+
+            const delWorker = this.db.prepare("DELETE FROM workers WHERE id = ?");
+            delWorker.run([workerId]);
+            delWorker.free();
+
+            this.saveToStorage();
+            console.log('✅ Worker deleted successfully');
+            return true;
+        } catch (error) {
+            console.error('❌ Error deleting worker:', error);
+            throw error;
         }
     }
 

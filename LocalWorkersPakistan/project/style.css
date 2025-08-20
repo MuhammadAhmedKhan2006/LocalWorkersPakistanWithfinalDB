@@ -334,6 +334,33 @@ body {
     padding-right: 45px;
 }
 
+/* Make category select simple like the city selector (no 3D/glow effects) */
+#regCategory, #regCity {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 15px !important;
+    color: #333 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    transition: border-color 0.3s ease !important;
+}
+
+#regCategory:hover, #regCity:hover {
+    background: rgba(255, 255, 255, 0.9) !important;
+}
+
+#regCategory:focus, #regCity:focus {
+    outline: none !important;
+    border-color: #667eea !important;
+    box-shadow: none !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+}
+
+#regCategory option, #regCity option {
+    background: white;
+    color: #333;
+}
+
 .register-submit {
     width: 100%;
     margin-top: 20px;
@@ -470,8 +497,8 @@ body {
 }
 
 .btn-add:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: var(--shadow-hover);
+    transform: none;
+    box-shadow: var(--shadow-3d);
 }
 
 /* Modal 3D Effects */
@@ -810,9 +837,32 @@ body {
 }
 
 .contact-btn {
-    width: 100%;
-    margin-bottom: 15px;
+    display: block;
+    width: auto;
+    margin: 0 auto 15px;
     font-size: 18px;
+}
+
+.worker-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff6b6b 0%, #f05454 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    box-shadow: var(--shadow-3d);
+}
+
+.btn-danger:hover {
+    opacity: 0.9;
 }
 
 /* 3D Stars */

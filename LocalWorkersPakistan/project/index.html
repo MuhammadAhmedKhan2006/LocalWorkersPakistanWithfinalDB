@@ -51,11 +51,10 @@
     <!-- Main App -->
     <div id="mainApp" class="main-app">
         <header class="header glass">
-            <h1 class="logo">🔧 Local Workers</h1>
+            <h1 class="logo">🔧 Local Workers Pakistan</h1>
             <div class="header-info">
                 <span id="selectedCity" class="city-badge"></span>
                 <button id="changeCity" class="btn-glass">Change</button>
-                <button id="exportData" class="btn-glass" onclick="exportData()">📥 Export</button>
             </div>
         </header>
 
@@ -96,7 +95,10 @@
                     </div>
                 </div>
                 <a id="contactBtn" class="btn-3d contact-btn">📞 Call Now</a>
-                <button id="feedbackBtn" class="btn-glass">⭐ Rate Service</button>
+                <div class="worker-actions">
+                    <button id="feedbackBtn" class="btn-glass" style="flex:1">⭐ Rate Service</button>
+                    <button id="deleteWorkerBtn" class="btn-danger" style="flex:1">🗑️ Delete Profile</button>
+                </div>
             </div>
         </div>
 
