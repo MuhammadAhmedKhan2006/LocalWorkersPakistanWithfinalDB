@@ -1,0 +1,43 @@
+{
+  "name": "local-workers-pakistan-sqlite",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local Workers Pakistan - SQLite Powered Platform",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "setup-db": "sqlite3 workers.db < setup.sql",
+    "reset-db": "rm -f workers.db && npm run setup-db",
+    "backup-db": "sqlite3 workers.db \".backup workers_backup_$(date +%Y%m%d_%H%M%S).db\"",
+    "serve": "vite preview --host 0.0.0.0 --port 3000"
+  },
+  "devDependencies": {
+    "vite": "^5.4.2"
+  },
+  "dependencies": {
+    "sql.js": "^1.8.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "workers",
+    "pakistan",
+    "sqlite",
+    "local-services",
+    "plumber",
+    "welder",
+    "carpenter"
+  ],
+  "author": "Local Workers Pakistan Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/local-workers-pakistan/sqlite-app"
+  },
+  "bugs": {
+    "url": "https://github.com/local-workers-pakistan/sqlite-app/issues"
+  },
+  "homepage": "https://local-workers-pakistan.github.io/sqlite-app"}
