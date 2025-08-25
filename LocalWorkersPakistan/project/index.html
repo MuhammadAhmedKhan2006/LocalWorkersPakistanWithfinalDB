@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+              <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -121,19 +121,23 @@
                         <label for="regName">Full Name</label>
                         <input type="text" id="regName" placeholder="Enter your full name" class="glass-input" required>
                     </div>
+                    
                     <div class="form-group">
                         <label for="regAge">Age</label>
                         <input type="number" id="regAge" placeholder="Enter your age" class="glass-input" required min="18" max="70">
                     </div>
+                    
                     <div class="form-group">
                         <label for="regExp">Years of Experience</label>
                         <input type="number" id="regExp" placeholder="Enter years of experience" class="glass-input" required min="0" max="50">
                     </div>
+                    
                     <div class="form-group">
                         <label for="regPhone">Phone Number</label>
                         <input type="tel" id="regPhone" placeholder="03xxxxxxxxx" class="glass-input" required pattern="03[0-9]{9}">
                         <small class="form-help">Must be 11 digits starting with 03</small>
                     </div>
+                    
                     <div class="form-group">
                         <label for="regCategory">Service Category</label>
                         <select id="regCategory" class="glass-input" required>
@@ -143,6 +147,7 @@
                             <option value="carpenter">🔨 Carpenter</option>
                         </select>
                     </div>
+                    
                     <div class="form-group">
                         <label for="regCity">City</label>
                         <select id="regCity" class="glass-input" required>
@@ -154,9 +159,11 @@
                             <option value="Sialkot">🏭 Sialkot</option>
                         </select>
                     </div>
+                    
                     <div class="database-info">
                         <small>✅ All data securely stored in SQLite database</small>
                     </div>
+                    
                     <button type="submit" class="btn-3d register-submit">✅ Register Now</button>
                 </form>
             </div>
@@ -190,7 +197,303 @@
     <!-- Notification -->
     <div id="notification" class="notification" style="display: none;"></div>
 
-    <script src="https://sql.js.org/dist/sql-wasm.js"></script>
-    <script type="module" src="LocalWorkersPakistan/project/main.js"></script>
+    <script>
+        // Simple JavaScript to make the app functional
+        let currentCity = '';
+        let currentCategory = 'plumber';
+        let workers = [
+            {
+                id: 1,
+                name: 'Ahmed Ali',
+                age: 35,
+                experience: 12,
+                phone: '03001234567',
+                category: 'plumber',
+                city: 'Karachi',
+                rating: 4.5,
+                feedbackCount: 23
+            },
+            {
+                id: 2,
+                name: 'Muhammad Hassan',
+                age: 28,
+                experience: 8,
+                phone: '03009876543',
+                category: 'plumber',
+                city: 'Lahore',
+                rating: 4.2,
+                feedbackCount: 15
+            },
+            {
+                id: 3,
+                name: 'Usman Khan',
+                age: 42,
+                experience: 18,
+                phone: '03005555555',
+                category: 'welder',
+                city: 'Karachi',
+                rating: 4.8,
+                feedbackCount: 31
+            },
+            {
+                id: 4,
+                name: 'Tariq Mahmood',
+                age: 38,
+                experience: 15,
+                phone: '03007777777',
+                category: 'carpenter',
+                city: 'Faisalabad',
+                rating: 4.3,
+                feedbackCount: 19
+            }
+        ];
+        let feedbacks = [];
+        let selectedWorker = null;
+        let selectedRating = 0;
+
+        // Initialize app
+        setTimeout(() => {
+            document.getElementById('loader').style.display = 'none';
+        }, 2000);
+
+        // City selection
+        document.getElementById('confirmCity').addEventListener('click', () => {
+            const citySelect = document.getElementById('citySelect');
+            if (citySelect.value) {
+                currentCity = citySelect.value;
+                document.getElementById('selectedCity').textContent = currentCity;
+                document.getElementById('cityModal').classList.remove('active');
+                document.getElementById('mainApp').classList.add('active');
+                showNotification(`Welcome to ${currentCity}! 🎉`);
+                renderWorkers();
+            }
+        });
+
+        // Change city
+        document.getElementById('changeCity').addEventListener('click', () => {
+            document.getElementById('cityModal').classList.add('active');
+            document.getElementById('mainApp').classList.remove('active');
+        });
+
+        // Category tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentCategory = btn.dataset.category;
+                
+                const categoryNames = {
+                    plumber: 'Plumbers',
+                    welder: 'Welders',
+                    carpenter: 'Carpenters'
+                };
+                document.getElementById('sectionTitle').textContent = `Available ${categoryNames[currentCategory]}`;
+                renderWorkers();
+            });
+        });
+
+        // Add worker button
+        document.getElementById('addWorkerBtn').addEventListener('click', () => {
+            document.getElementById('registerModal').classList.add('active');
+        });
+
+        // Modal close buttons
+        document.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.closest('.modal').classList.remove('active');
+            });
+        });
+
+        // Register form
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const newWorker = {
+                id: Date.now(),
+                name: document.getElementById('regName').value,
+                age: parseInt(document.getElementById('regAge').value),
+                experience: parseInt(document.getElementById('regExp').value),
+                phone: document.getElementById('regPhone').value,
+                category: document.getElementById('regCategory').value,
+                city: document.getElementById('regCity').value,
+                rating: 0,
+                feedbackCount: 0
+            };
+            
+            workers.push(newWorker);
+            document.getElementById('registerModal').classList.remove('active');
+            document.getElementById('registerForm').reset();
+            showNotification('Registration successful! 🎉');
+            renderWorkers();
+        });
+
+        // Star rating
+        document.querySelectorAll('.star-3d').forEach(star => {
+            star.addEventListener('click', () => {
+                selectedRating = parseInt(star.dataset.rating);
+                updateStars();
+                updateRatingText();
+                document.getElementById('submitFeedback').disabled = false;
+            });
+        });
+
+        // Submit feedback
+        document.getElementById('submitFeedback').addEventListener('click', () => {
+            if (selectedWorker && selectedRating > 0) {
+                const feedback = {
+                    id: Date.now(),
+                    workerId: selectedWorker.id,
+                    rating: selectedRating,
+                    comment: document.getElementById('feedbackText').value,
+                    date: new Date().toISOString().split('T')[0]
+                };
+                
+                feedbacks.push(feedback);
+                
+                // Update worker rating
+                const workerFeedbacks = feedbacks.filter(f => f.workerId === selectedWorker.id);
+                const avgRating = workerFeedbacks.reduce((sum, f) => sum + f.rating, 0) / workerFeedbacks.length;
+                selectedWorker.rating = Math.round(avgRating * 10) / 10;
+                selectedWorker.feedbackCount = workerFeedbacks.length;
+                
+                document.getElementById('feedbackModal').classList.remove('active');
+                document.getElementById('feedbackText').value = '';
+                selectedRating = 0;
+                updateStars();
+                showNotification('Thank you for your feedback! 🌟');
+                renderWorkers();
+            }
+        });
+
+        // Delete worker
+        document.getElementById('deleteWorkerBtn').addEventListener('click', () => {
+            if (selectedWorker) {
+                workers = workers.filter(w => w.id !== selectedWorker.id);
+                feedbacks = feedbacks.filter(f => f.workerId !== selectedWorker.id);
+                document.getElementById('workerModal').classList.remove('active');
+                showNotification('Worker profile deleted! 🗑️');
+                renderWorkers();
+            }
+        });
+
+        function renderWorkers() {
+            const grid = document.getElementById('workersGrid');
+            const filteredWorkers = workers.filter(w => 
+                w.category === currentCategory && 
+                (currentCity ? w.city === currentCity : true)
+            );
+
+            if (filteredWorkers.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No workers found</h3>
+                        <p>Be the first to register in this category!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filteredWorkers.map(worker => `
+                <div class="worker-card" onclick="showWorkerDetails(${worker.id})">
+                    <div class="worker-header">
+                        <div class="worker-avatar">
+                            ${worker.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div class="worker-info">
+                            <h3 class="worker-name">${worker.name}</h3>
+                            <p class="worker-location">📍 ${worker.city}</p>
+                            <div class="worker-rating">
+                                ${renderStars(worker.rating)}
+                                <span class="rating-text">(${worker.feedbackCount})</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="worker-stats">
+                        <div class="stat">
+                            <span class="stat-value">${worker.age}</span>
+                            <span class="stat-label">Age</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${worker.experience}</span>
+                            <span class="stat-label">Years</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${worker.rating.toFixed(1)}</span>
+                            <span class="stat-label">Rating</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showWorkerDetails(workerId) {
+            selectedWorker = workers.find(w => w.id === workerId);
+            if (!selectedWorker) return;
+
+            document.getElementById('workerInitials').textContent = 
+                selectedWorker.name.split(' ').map(n => n[0]).join('');
+            document.getElementById('workerName').textContent = selectedWorker.name;
+            document.getElementById('workerAge').textContent = selectedWorker.age;
+            document.getElementById('workerExp').textContent = selectedWorker.experience + ' years';
+            document.getElementById('workerCity').textContent = selectedWorker.city;
+            document.getElementById('workerStars').innerHTML = renderStars(selectedWorker.rating);
+            document.getElementById('workerRatingText').textContent = 
+                `${selectedWorker.rating.toFixed(1)} stars • ${selectedWorker.feedbackCount} reviews`;
+            document.getElementById('contactBtn').href = `tel:${selectedWorker.phone}`;
+            document.getElementById('feedbackWorkerName').textContent = selectedWorker.name;
+
+            // Show feedbacks if any
+            const workerFeedbacks = feedbacks.filter(f => f.workerId === selectedWorker.id);
+            if (workerFeedbacks.length > 0) {
+                document.getElementById('workerFeedbacks').style.display = 'block';
+                document.getElementById('feedbacksList').innerHTML = workerFeedbacks.map(f => `
+                    <div class="feedback-item">
+                        <div class="feedback-rating">${renderStars(f.rating)}</div>
+                        ${f.comment ? `<p class="feedback-comment">"${f.comment}"</p>` : ''}
+                        <p class="feedback-date">${f.date}</p>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('workerFeedbacks').style.display = 'none';
+            }
+
+            document.getElementById('workerModal').classList.add('active');
+        }
+
+        document.getElementById('feedbackBtn').addEventListener('click', () => {
+            document.getElementById('workerModal').classList.remove('active');
+            document.getElementById('feedbackModal').classList.add('active');
+        });
+
+        function renderStars(rating) {
+            return Array.from({length: 5}, (_, i) => 
+                `<span class="star-display ${i < Math.floor(rating) ? 'active' : ''} ${i < rating && i >= Math.floor(rating) ? 'half' : ''}">★</span>`
+            ).join('');
+        }
+
+        function updateStars() {
+            document.querySelectorAll('.star-3d').forEach((star, index) => {
+                if (index < selectedRating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+
+        function updateRatingText() {
+            const texts = ['Select rating', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+            document.getElementById('ratingText').textContent = texts[selectedRating];
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
