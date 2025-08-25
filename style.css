@@ -92,73 +92,6 @@ body {
     font-style: italic;
 }
 
-/* Enhanced Header */
-.header-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.header-info .btn-glass {
-    padding: 8px 12px;
-    font-size: 12px;
-}
-
-/* Worker Feedback Display */
-.worker-feedback-list {
-    margin: 20px 0;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.worker-feedback-list h4 {
-    color: white;
-    font-size: 16px;
-    margin-bottom: 15px;
-    text-align: center;
-}
-
-.feedback-item {
-    margin: 10px 0;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.feedback-rating {
-    margin-bottom: 8px;
-}
-
-.feedback-rating .star-display {
-    font-size: 14px;
-    margin-right: 2px;
-}
-
-.feedback-comment {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 14px;
-    margin-bottom: 8px;
-    font-style: italic;
-}
-
-.feedback-date {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 12px;
-    text-align: right;
-}
-
-/* Enhanced Form Help */
-.form-help {
-    display: block;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 12px;
-    margin-top: 5px;
-    font-style: italic;
-}
-
 /* 3D Background Animation */
 .bg-animation {
     position: fixed;
@@ -236,155 +169,6 @@ body {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* Form Error States */
-.glass-input.error {
-    border-color: #ff6b6b;
-    box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
-}
-
-.glass-input.error:focus {
-    border-color: #ff6b6b;
-    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
-}
-
-.field-error {
-    color: #ff6b6b !important;
-    font-size: 12px !important;
-    margin-top: 5px !important;
-    font-style: italic !important;
-    text-shadow: none !important;
-}
-
-/* Form Improvements */
-.form-description {
-    color: rgba(255, 255, 255, 0.8);
-    text-align: center;
-    margin-bottom: 25px;
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label {
-    display: block;
-    color: white;
-    font-weight: 600;
-    margin-bottom: 8px;
-    font-size: 14px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-/* Registration Form Specific */
-.register-form {
-    max-width: 500px;
-    width: 90vw;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
-.register-form h2 {
-    color: white;
-    text-align: center;
-    margin-bottom: 15px;
-    font-size: 24px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.register-form .form-description {
-    margin-bottom: 25px;
-}
-
-.register-form .form-group {
-    margin-bottom: 20px;
-}
-
-.register-form .glass-input {
-    width: 100%;
-    margin-bottom: 0;
-    font-size: 16px;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.15);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-    color: white;
-    transition: all 0.3s ease;
-    box-sizing: border-box;
-}
-
-.register-form .glass-input:focus {
-    border-color: rgba(255, 255, 255, 0.7);
-    box-shadow: 0 0 25px rgba(255, 255, 255, 0.4);
-    background: rgba(255, 255, 255, 0.2);
-    outline: none;
-}
-
-.register-form .glass-input::placeholder {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.register-form select.glass-input {
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 15px center;
-    background-size: 16px;
-    padding-right: 45px;
-}
-
-/* Make category select simple like the city selector (no 3D/glow effects) */
-#regCategory, #regCity {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 2px solid rgba(255, 255, 255, 0.3) !important;
-    border-radius: 15px !important;
-    color: #333 !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    transition: border-color 0.3s ease !important;
-}
-
-#regCategory:hover, #regCity:hover {
-    background: rgba(255, 255, 255, 0.9) !important;
-}
-
-#regCategory:focus, #regCity:focus {
-    outline: none !important;
-    border-color: #667eea !important;
-    box-shadow: none !important;
-    background: rgba(255, 255, 255, 0.95) !important;
-}
-
-#regCategory option, #regCity option {
-    background: white;
-    color: #333;
-}
-
-.register-submit {
-    width: 100%;
-    margin-top: 20px;
-    padding: 18px;
-    font-size: 18px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    border: none;
-    border-radius: 15px;
-    color: white;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
-}
-
-.register-submit:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 35px rgba(79, 172, 254, 0.6);
-}
-
-.register-submit:active {
-    transform: translateY(-1px);
-}
-
 /* City Select - Simple Style */
 .city-select {
     background: rgba(255, 255, 255, 0.9);
@@ -442,6 +226,7 @@ body {
     transform: perspective(1000px) rotateX(0deg);
     position: relative;
     overflow: hidden;
+    width: 100%;
 }
 
 .btn-3d:before {
@@ -477,6 +262,7 @@ body {
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
+    border: none;
 }
 
 .btn-glass:hover {
@@ -497,8 +283,8 @@ body {
 }
 
 .btn-add:hover {
-    transform: none;
-    box-shadow: var(--shadow-3d);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
 }
 
 /* Modal 3D Effects */
@@ -515,6 +301,7 @@ body {
     visibility: hidden;
     transition: all 0.4s ease;
     padding: 20px;
+    overflow-y: auto;
 }
 
 .modal.active {
@@ -524,8 +311,7 @@ body {
 
 .modal-content {
     padding: 30px;
-    margin: 20px;
-    max-width: 400px;
+    max-width: 450px;
     width: 100%;
     position: relative;
     transform: perspective(1000px) rotateY(90deg) scale(0.8);
@@ -535,6 +321,10 @@ body {
     border: 1px solid var(--glass-border);
     border-radius: 20px;
     box-shadow: var(--shadow-3d);
+    margin: 20px 0;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    color: white;
 }
 
 .modal.active .modal-content {
@@ -551,6 +341,7 @@ body {
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
+    z-index: 10;
 }
 
 .modal-close:hover {
@@ -592,6 +383,12 @@ body {
     font-weight: 700;
     color: white;
     text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.header-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .city-badge {
@@ -784,11 +581,14 @@ body {
 .worker-details {
     text-align: center;
     max-width: 500px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    padding: 25px;
 }
 
 .worker-avatar-3d {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     background: var(--primary);
     display: flex;
@@ -796,15 +596,22 @@ body {
     justify-content: center;
     color: white;
     font-weight: 700;
-    font-size: 32px;
-    margin: 0 auto 20px;
+    font-size: 28px;
+    margin: 0 auto 15px;
     box-shadow: var(--shadow-3d);
     transform: perspective(500px) rotateX(-20deg);
 }
 
+.worker-details h3 {
+    color: white;
+    font-size: 24px;
+    margin-bottom: 15px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
 .worker-rating-display {
-    margin: 20px 0;
-    padding: 15px;
+    margin: 15px 0;
+    padding: 12px;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border-radius: 15px;
@@ -812,42 +619,51 @@ body {
 }
 
 .rating-stars {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .rating-stars .star-display {
-    font-size: 24px;
+    font-size: 20px;
     margin: 0 2px;
 }
 
 .worker-info-3d {
     display: grid;
-    gap: 15px;
-    margin: 30px 0;
+    gap: 12px;
+    margin: 20px 0;
 }
 
 .info-card {
-    padding: 15px;
+    padding: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     color: white;
     font-weight: 600;
     transform: perspective(500px) rotateX(-5deg);
+    font-size: 14px;
 }
 
 .contact-btn {
     display: block;
     width: auto;
     margin: 0 auto 15px;
-    font-size: 18px;
+    font-size: 16px;
+    padding: 12px 24px;
+    text-decoration: none;
 }
 
 .worker-actions {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     justify-content: space-between;
     width: 100%;
+    margin-top: 15px;
+}
+
+.worker-actions button {
+    font-size: 13px;
+    padding: 10px 12px;
 }
 
 .btn-danger {
@@ -865,16 +681,64 @@ body {
     opacity: 0.9;
 }
 
+/* Worker Feedback Display */
+.worker-feedback-list {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.worker-feedback-list h4 {
+    color: white;
+    font-size: 16px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.feedback-item {
+    margin: 10px 0;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.feedback-rating {
+    margin-bottom: 8px;
+}
+
+.feedback-rating .star-display {
+    font-size: 14px;
+    margin-right: 2px;
+}
+
+.feedback-comment {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.feedback-date {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    text-align: right;
+}
+
 /* 3D Stars */
 .stars-3d {
     display: flex;
     justify-content: center;
-    gap: 10px;
-    margin: 30px 0;
+    gap: 8px;
+    margin: 25px 0;
 }
 
 .star-3d {
-    font-size: 40px;
+    font-size: 32px;
     color: rgba(255, 255, 255, 0.3);
     cursor: pointer;
     transition: all 0.3s ease;
@@ -884,7 +748,7 @@ body {
 .star-3d:hover,
 .star-3d.active {
     color: #ffd700;
-    transform: perspective(500px) rotateX(-20deg) scale(1.2);
+    transform: perspective(500px) rotateX(-20deg) scale(1.1);
     text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
 }
 
@@ -904,7 +768,7 @@ body {
 .rating-label {
     text-align: center;
     margin: 15px 0;
-    padding: 10px;
+    padding: 8px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -913,7 +777,73 @@ body {
 .rating-label span {
     color: white;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 14px;
+}
+
+/* Form Improvements */
+.form-description {
+    color: rgba(255, 255, 255, 0.8);
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: white;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.form-help {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+/* Registration Form Specific */
+.register-form {
+    max-width: 500px;
+    width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.register-form h2 {
+    color: white;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 24px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.register-submit {
+    width: 100%;
+    margin-top: 20px;
+    padding: 18px;
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border: none;
+    border-radius: 15px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+}
+
+.register-submit:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(79, 172, 254, 0.6);
 }
 
 /* Empty State */
@@ -925,6 +855,7 @@ body {
     backdrop-filter: blur(20px);
     border-radius: 20px;
     border: 1px solid var(--glass-border);
+    grid-column: 1 / -1;
 }
 
 .empty-state h3 {
@@ -956,6 +887,23 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
+    .modal {
+        padding: 10px;
+        align-items: flex-start;
+        padding-top: 20px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+        margin: 10px 0;
+        max-height: calc(100vh - 30px);
+    }
+    
+    .worker-details {
+        padding: 15px;
+        max-height: calc(100vh - 60px);
+    }
+    
     .header {
         flex-direction: column;
         gap: 15px;
@@ -964,20 +912,10 @@ body {
         margin: 10px;
     }
     
-    .header-info {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    
     .nav-tabs {
         flex-direction: column;
         margin: 10px;
         gap: 8px;
-    }
-    
-    .tab-btn {
-        padding: 12px;
-        font-size: 14px;
     }
     
     .section-header {
@@ -986,17 +924,9 @@ body {
         margin-bottom: 20px;
     }
     
-    .section-header h2 {
-        font-size: 24px;
-    }
-    
     .workers-grid {
         grid-template-columns: 1fr;
         gap: 15px;
-    }
-    
-    .worker-card {
-        padding: 20px;
     }
     
     .worker-header {
@@ -1006,167 +936,16 @@ body {
     }
     
     .worker-avatar {
-        width: 80px;
-        height: 80px;
-        font-size: 24px;
         margin: 0 auto;
-    }
-    
-    .worker-stats {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-    }
-    
-    .stat {
-        padding: 12px 8px;
-    }
-    
-    .stat-value {
-        font-size: 18px;
-    }
-    
-    .stat-label {
-        font-size: 10px;
     }
     
     .floating-shape {
         display: none;
     }
     
-    /* Modal improvements for mobile */
-    .modal-content {
-        margin: 10px;
-        padding: 20px;
-        max-width: 90vw;
-    }
-    
-    .worker-details {
-        max-width: 90vw;
-    }
-    
-    .worker-avatar-3d {
-        width: 80px;
-        height: 80px;
-        font-size: 28px;
-    }
-    
-    .stars-3d {
-        gap: 8px;
-    }
-    
-    .star-3d {
-        font-size: 32px;
-    }
-    
-    /* Form improvements for mobile */
-    .glass-input {
-        padding: 12px;
-        font-size: 16px; /* Prevents zoom on iOS */
-    }
-    
-    .btn-3d {
-        padding: 12px 24px;
-        font-size: 16px;
-    }
-    
-    .btn-add {
-        padding: 10px 20px;
-        font-size: 14px;
-    }
-    
     .notification {
         right: 10px;
         left: 10px;
         max-width: none;
-    }
-}
-
-/* Extra small devices */
-@media (max-width: 480px) {
-    .header {
-        padding: 10px;
-        margin: 5px;
-    }
-    
-    .logo {
-        font-size: 20px;
-    }
-    
-    .city-badge {
-        padding: 6px 12px;
-        font-size: 12px;
-    }
-    
-    .nav-tabs {
-        margin: 5px;
-        padding: 8px;
-    }
-    
-    .tab-btn {
-        padding: 10px;
-        font-size: 13px;
-    }
-    
-    .main-content {
-        padding: 10px;
-    }
-    
-    .worker-card {
-        padding: 15px;
-    }
-    
-    .worker-stats {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-    
-    .stat {
-        padding: 10px;
-    }
-    
-    .modal-content {
-        padding: 15px;
-        margin: 5px;
-    }
-    
-    .project-title h1 {
-        font-size: 24px;
-    }
-    
-    .tagline {
-        font-size: 14px;
-    }
-}
-
-/* Landscape orientation for mobile */
-@media (max-width: 768px) and (orientation: landscape) {
-    .header {
-        flex-direction: row;
-        padding: 10px 20px;
-    }
-    
-    .nav-tabs {
-        flex-direction: row;
-        justify-content: center;
-    }
-    
-    .worker-header {
-        flex-direction: row;
-        text-align: left;
-    }
-    
-    .worker-avatar {
-        margin: 0;
-    }
-}
-
-/* High DPI displays */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-    .worker-card {
-        border-width: 0.5px;
-    }
-    
-    .glass-input {
-        border-width: 0.5px;
     }
 }

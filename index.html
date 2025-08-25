@@ -11,7 +11,7 @@
 </head>
 <body>
     <!-- Loading Overlay -->
-    <div id="loader" class="loader-overlay" style="display: flex;">
+    <div id="loader" class="loader-overlay">
         <div class="loader-content glass">
             <div class="spinner"></div>
             <div class="loader-text">Initializing database...</div>
@@ -80,6 +80,10 @@
                     <span id="workerInitials"></span>
                 </div>
                 <h3 id="workerName"></h3>
+                <div class="worker-rating-display">
+                    <div class="rating-stars" id="workerStars"></div>
+                    <p id="workerRatingText"></p>
+                </div>
                 <div class="worker-info-3d">
                     <div class="info-card glass">
                         <span>Age</span>
@@ -98,6 +102,10 @@
                 <div class="worker-actions">
                     <button id="feedbackBtn" class="btn-glass" style="flex:1">⭐ Rate Service</button>
                     <button id="deleteWorkerBtn" class="btn-danger" style="flex:1">🗑️ Delete Profile</button>
+                </div>
+                <div id="workerFeedbacks" class="worker-feedback-list" style="display: none;">
+                    <h4>Recent Reviews</h4>
+                    <div id="feedbacksList"></div>
                 </div>
             </div>
         </div>
@@ -186,9 +194,15 @@
         </div>
     </div>
 
-    <!-- Load SQL.js library -->
-    <script src="https://sql.js.org/dist/sql-wasm.js"></script>
-    <!-- Load main application as ES module -->
+    <!-- Notification -->
+    <div id="notification" class="notification" style="display: none;"></div>
+
+    <!-- JS Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/localforage/dist/localforage.min.js"></script>
+
+    <!-- App Scripts -->
+    <script type="module" src="database.js"></script>
     <script type="module" src="main.js"></script>
 </body>
 </html>
