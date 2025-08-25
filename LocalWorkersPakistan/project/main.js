@@ -1,10 +1,4 @@
-// Updated main.js with cross-device synchronization for Local Workers Pakistan
-import WorkersDatabase from './database.js';
-
-// Global database instance
-let workersDB = null;
-
-// Updated main.js with cross-device synchronization for Local Workers Pakistan
+                  // Updated main.js with SQLite integration for Local Workers Pakistan
 import WorkersDatabase from './database.js';
 
 // Global database instance
@@ -12,8 +6,6 @@ let db = null;
 
 // State
 let currentCity = '', currentCategory = 'plumber', selectedWorker = null, selectedRating = 0;
-let isOnline = navigator.onLine;
-let lastUpdateTime = 0;
 
 // Elements
 const cityModal = document.getElementById('cityModal');
@@ -47,36 +39,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     await initializeApp();
 });
 
-// Initialize the application with sync support
+// Initialize the application
 async function initializeApp() {
     try {
-        showLoadingState('Initializing database with sync...');
+        showLoadingState('Initializing database...');
         
-        // Initialize database with sync capabilities
+        // Initialize database
         await initializeDatabase();
         
         // Setup event listeners
         setupEventListeners();
         
-        // Setup cross-device sync listeners
-        setupSyncListeners();
-        
         // Add touch support for mobile
         addTouchSupport();
         
-        // Setup online/offline detection
-        setupNetworkListeners();
-        
         hideLoadingState();
-        console.log('✅ Application initialized successfully with sync');
+        console.log('✅ Application initialized successfully');
     } catch (error) {
         console.error('❌ Application initialization failed:', error);
-        showNotification('⚠️ Application started in offline mode');
+        showNotification('❌ Application failed to initialize. Using offline mode.');
         hideLoadingState();
     }
 }
 
-// Initialize database connection with sync
+// Initialize database connection
 async function initializeDatabase() {
     try {
         // Load SQL.js library for web-based SQLite
@@ -84,78 +70,15 @@ async function initializeDatabase() {
             await loadSqlJs();
         }
         
-        workersDB = new WorkersDatabase();
-        await workersDB.init();
+        db = new WorkersDatabase();
+        await db.init();
         
-        // Make renderWorkers available globally for sync callbacks
-        window.renderWorkers = renderWorkers;
-        
-        console.log('✅ Database initialized successfully with sync');
+        console.log('✅ Database initialized successfully');
         return true;
     } catch (error) {
         console.error('❌ Database initialization failed:', error);
         // Fallback to localStorage will be handled by WorkersDatabase
         return false;
-    }
-}
-
-// Setup cross-device synchronization listeners
-function setupSyncListeners() {
-    try {
-        // Listen for updates from database
-        if (workersDB && workersDB.listenForUpdates) {
-            workersDB.listenForUpdates();
-        }
-        
-        // Listen for storage changes from other tabs/windows
-        window.addEventListener('storage', async (e) => {
-            if (e.key && e.key.includes('workers_pakistan_sync')) {
-                console.log('🔄 Data updated in another tab, refreshing...');
-                await refreshCurrentView();
-                showNotification('🔄 Data updated from another device');
-            }
-        });
-        
-        // Listen for page visibility changes
-        document.addEventListener('visibilitychange', async () => {
-            if (!document.hidden && workersDB) {
-                // Page became visible, sync data
-                console.log('🔄 Page became visible, syncing data...');
-                await refreshCurrentView();
-            }
-        });
-        
-        console.log('✅ Sync listeners setup complete');
-    } catch (error) {
-        console.error('❌ Error setting up sync listeners:', error);
-    }
-}
-
-// Setup network status listeners
-function setupNetworkListeners() {
-    window.addEventListener('online', () => {
-        isOnline = true;
-        showNotification('🌐 Connection restored - syncing data...');
-        if (workersDB && workersDB.syncWithCloud) {
-            workersDB.syncWithCloud();
-        }
-    });
-    
-    window.addEventListener('offline', () => {
-        isOnline = false;
-        showNotification('📱 Working offline - data will sync when connection is restored');
-    });
-}
-
-// Refresh current view with latest data
-async function refreshCurrentView() {
-    try {
-        if (currentCity && currentCategory) {
-            await renderWorkers();
-            lastUpdateTime = Date.now();
-        }
-    } catch (error) {
-        console.error('❌ Error refreshing view:', error);
     }
 }
 
@@ -232,14 +155,14 @@ function setupEventListeners() {
     if (deleteWorkerBtn) {
         deleteWorkerBtn.onclick = async () => {
             if (!selectedWorker) return;
-            const confirmed = confirm(`Are you sure you want to delete ${selectedWorker.name}? This will be removed from all devices.`);
+            const confirmed = confirm(`Are you sure you want to delete ${selectedWorker.name}? This cannot be undone.`);
             if (!confirmed) return;
             try {
-                showLoadingState('Deleting profile and syncing...');
-                await workersDB.deleteWorker(selectedWorker.id);
+                showLoadingState('Deleting profile...');
+                await db.deleteWorker(selectedWorker.id);
                 hideLoadingState();
                 workerModal.classList.remove('active');
-                showNotification('✅ Profile deleted and synced across all devices');
+                showNotification('✅ Profile deleted');
                 await renderWorkers();
             } catch (error) {
                 hideLoadingState();
@@ -297,7 +220,7 @@ function setupEventListeners() {
     };
 }
 
-// Handle worker registration with sync
+// Handle worker registration
 async function handleRegistration() {
     try {
         const formData = {
@@ -319,46 +242,46 @@ async function handleRegistration() {
             return;
         }
 
-        showLoadingState('Registering worker and syncing across devices...');
+        showLoadingState('Registering worker...');
 
-        // Add worker to database (this will trigger sync automatically)
-        const newWorker = await workersDB.addWorker(formData);
+        // Add worker to database
+        const newWorker = await db.addWorker(formData);
         
         hideLoadingState();
         registerModal.classList.remove('active');
         resetRegistrationForm();
         
-        showNotification('✅ Registration successful! Now visible on all devices with this link.');
+        showNotification('✅ Registration successful! You can now be found by customers.');
         
         // Refresh display if current filters match
         if (currentCategory === formData.category && currentCity === formData.city) {
             await renderWorkers();
         }
 
-        console.log('✅ Worker registered and synced successfully:', newWorker);
+        console.log('✅ Worker registered successfully:', newWorker);
     } catch (error) {
         hideLoadingState();
         console.error('❌ Registration failed:', error);
         
         if (error.message.includes('already registered')) {
             showFieldError('regPhone', 'Phone number already registered');
-            showNotification('❌ Phone number already registered on another device');
+            showNotification('❌ Phone number already registered');
         } else {
             showNotification('❌ Registration failed. Please try again.');
         }
     }
 }
 
-// Submit worker feedback with sync
+// Submit worker feedback
 async function submitWorkerFeedback() {
     try {
-        showLoadingState('Submitting feedback and syncing...');
+        showLoadingState('Submitting feedback...');
         
         const comment = feedbackText.value.trim();
-        await workersDB.addFeedback(selectedWorker.id, selectedRating, comment);
+        await db.addFeedback(selectedWorker.id, selectedRating, comment);
         
         // Update local worker object
-        const updatedWorker = await workersDB.getWorkerById(selectedWorker.id);
+        const updatedWorker = await db.getWorkerById(selectedWorker.id);
         if (updatedWorker) {
             selectedWorker.rating = updatedWorker.rating;
             selectedWorker.total_ratings = updatedWorker.total_ratings;
@@ -368,12 +291,12 @@ async function submitWorkerFeedback() {
         feedbackModal.classList.remove('active');
         resetFeedbackForm();
         
-        showNotification(`⭐ Thank you for ${selectedRating}-star rating! Updated across all devices.`);
+        showNotification(`⭐ Thank you for ${selectedRating}-star rating! Worker rating updated.`);
         
         // Refresh the display to show updated rating
         await renderWorkers();
         
-        console.log('✅ Feedback submitted and synced successfully');
+        console.log('✅ Feedback submitted successfully');
     } catch (error) {
         hideLoadingState();
         console.error('❌ Error submitting feedback:', error);
@@ -423,24 +346,19 @@ function showValidationErrors(errors) {
     showNotification('❌ Please fix the errors above');
 }
 
-// Render workers list with sync status
+// Render workers list
 async function renderWorkers() {
     try {
-        showLoadingState('Loading latest data from all devices...');
+        showLoadingState('Loading workers...');
         
-        // Get workers with auto-sync
-        const workers = await workersDB.getWorkers(currentCategory, currentCity);
+        const workers = await db.getWorkers(currentCategory, currentCity);
         workersGrid.innerHTML = '';
 
         if (!workers || workers.length === 0) {
             workersGrid.innerHTML = `
                 <div class="empty-state glass">
                     <h3>No ${currentCategory}s in ${currentCity}</h3>
-                    <p>Be the first to register and it will show on all devices!</p>
-                    <div class="sync-status">
-                        <span class="sync-indicator ${isOnline ? 'online' : 'offline'}"></span>
-                        ${isOnline ? 'Connected - Live sync active' : 'Offline - Will sync when connected'}
-                    </div>
+                    <p>Be the first to register!</p>
                 </div>
             `;
             hideLoadingState();
@@ -455,60 +373,13 @@ async function renderWorkers() {
             workersGrid.appendChild(card);
         });
         
-        // Add sync status indicator
-        addSyncStatusIndicator();
-        
         hideLoadingState();
-        console.log(`✅ Loaded ${workers.length} synced workers for ${currentCategory} in ${currentCity}`);
+        console.log(`✅ Loaded ${workers.length} workers for ${currentCategory} in ${currentCity}`);
     } catch (error) {
         hideLoadingState();
         console.error('❌ Error rendering workers:', error);
         showNotification('❌ Failed to load workers');
     }
-}
-
-// Add sync status indicator to the UI
-function addSyncStatusIndicator() {
-    const existingIndicator = document.querySelector('.sync-status-bar');
-    if (existingIndicator) {
-        existingIndicator.remove();
-    }
-    
-    const syncBar = document.createElement('div');
-    syncBar.className = 'sync-status-bar';
-    syncBar.innerHTML = `
-        <div class="sync-info">
-            <span class="sync-indicator ${isOnline ? 'online' : 'offline'}"></span>
-            <span class="sync-text">
-                ${isOnline ? '🔄 Live sync active - Data shared across all devices' : '📱 Offline mode - Will sync when connected'}
-            </span>
-        </div>
-    `;
-    
-    // Add some basic styling
-    syncBar.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 8px 16px;
-        text-align: center;
-        font-size: 12px;
-        z-index: 1000;
-        backdrop-filter: blur(10px);
-    `;
-    
-    document.body.appendChild(syncBar);
-    
-    // Auto-hide after 3 seconds
-    setTimeout(() => {
-        if (syncBar.parentNode) {
-            syncBar.style.transform = 'translateY(-100%)';
-            setTimeout(() => syncBar.remove(), 300);
-        }
-    }, 3000);
 }
 
 // Create worker card element
@@ -549,7 +420,6 @@ function createWorkerCard(worker) {
                 <span class="stat-label">Reviews</span>
             </div>
         </div>
-        <div class="sync-badge">🔄 Synced</div>
     `;
     
     return card;
@@ -580,7 +450,6 @@ async function showWorkerDetails(worker) {
         ratingDisplay.innerHTML = `
             <div class="rating-stars">${ratingStars}</div>
             <div class="rating-text">${ratingText}</div>
-            <div class="sync-info">✅ Data synced across all devices</div>
         `;
         
         // Remove existing rating display if any
@@ -605,7 +474,7 @@ async function showWorkerDetails(worker) {
 // Load worker feedback
 async function loadWorkerFeedback(workerId) {
     try {
-        const feedback = await workersDB.getWorkerFeedback(workerId);
+        const feedback = await db.getWorkerFeedback(workerId);
         
         // Remove existing feedback display
         const existingFeedback = document.querySelector('.worker-feedback-list');
@@ -616,7 +485,7 @@ async function loadWorkerFeedback(workerId) {
         if (feedback && feedback.length > 0) {
             const feedbackContainer = document.createElement('div');
             feedbackContainer.className = 'worker-feedback-list';
-            feedbackContainer.innerHTML = '<h4>Recent Reviews (Synced from all devices):</h4>';
+            feedbackContainer.innerHTML = '<h4>Recent Reviews:</h4>';
             
             // Show latest 3 feedback entries
             feedback.slice(0, 3).forEach(fb => {
@@ -738,7 +607,7 @@ function clearFormErrors() {
     });
 }
 
-// UI helper functions with sync feedback
+// UI helper functions
 function showLoadingState(message = 'Loading...') {
     const loader = document.getElementById('loader') || createLoader();
     loader.querySelector('.loader-text').textContent = message;
@@ -770,22 +639,9 @@ function showNotification(message) {
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: rgba(0,0,0,0.9);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        z-index: 10000;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.1);
-    `;
     document.body.appendChild(notification);
     setTimeout(() => {
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => notification.remove(), 300);
+        notification.remove();
     }, 3000);
 }
 
@@ -827,43 +683,26 @@ function addTouchSupport() {
 // Export data function for backup
 async function exportData() {
     try {
-        if (!workersDB) {
+        if (!db) {
             throw new Error('Database not initialized');
         }
         
-        const data = await workersDB.exportData();
+        const data = await db.exportData();
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `workers_backup_synced_${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `workers_backup_${new Date().toISOString().split('T')[0]}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        showNotification('✅ Synced data exported successfully');
+        showNotification('✅ Data exported successfully');
     } catch (error) {
         console.error('❌ Error exporting data:', error);
         showNotification('❌ Failed to export data');
-    }
-}
-
-// Manual sync function (can be called by user)
-async function manualSync() {
-    try {
-        showLoadingState('Syncing with all devices...');
-        if (workersDB && workersDB.syncWithCloud) {
-            await workersDB.syncWithCloud();
-            await refreshCurrentView();
-            showNotification('✅ Data synced successfully across all devices');
-        }
-    } catch (error) {
-        console.error('❌ Manual sync failed:', error);
-        showNotification('❌ Sync failed - will retry automatically');
-    } finally {
-        hideLoadingState();
     }
 }
 
@@ -875,11 +714,7 @@ window.addEventListener('error', function(event) {
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', async function() {
-    if (workersDB) {
-        await workersDB.close();
+    if (db) {
+        await db.close();
     }
 });
-
-// Make some functions globally available
-window.manualSync = manualSync;
-window.exportData = exportData;
