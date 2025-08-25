@@ -1,4 +1,4 @@
-               // Database operations for Local Workers Pakistan
+// Database operations for Local Workers Pakistan
 // This file handles all SQLite database interactions with fallback to localStorage
 
 class WorkersDatabase {
@@ -13,11 +13,19 @@ class WorkersDatabase {
         try {
             console.log('🔄 Initializing database...');
             
-            // Try SQL.js first
-            if (typeof window !== 'undefined' && window.initSqlJs) {
-                await this.initSqlJs();
+            // Always try localStorage first for better reliability
+            if (this.hasExistingData()) {
+                console.log('📦 Found existing data, using localStorage mode');
+                this.fallbackToLocalStorage();
+            } else if (typeof window !== 'undefined' && window.initSqlJs) {
+                try {
+                    await this.initSqlJs();
+                } catch (sqlError) {
+                    console.warn('⚠️ SQL.js failed, falling back to localStorage:', sqlError);
+                    this.fallbackToLocalStorage();
+                }
             } else {
-                console.log('⚠️ SQL.js not available, falling back to localStorage');
+                console.log('⚠️ SQL.js not available, using localStorage');
                 this.fallbackToLocalStorage();
             }
             
@@ -27,8 +35,16 @@ class WorkersDatabase {
         } catch (error) {
             console.error('❌ Database initialization failed:', error);
             this.fallbackToLocalStorage();
+            this.isInitialized = true;
             return false;
         }
+    }
+
+    // Check if existing data exists in localStorage
+    hasExistingData() {
+        const workers = localStorage.getItem('workers');
+        const feedback = localStorage.getItem('feedback');
+        return workers && workers !== '[]' && JSON.parse(workers).length > 0;
     }
 
     // Initialize SQL.js
@@ -38,7 +54,18 @@ class WorkersDatabase {
                 locateFile: file => `https://sql.js.org/dist/${file}`
             });
             
-            // Try to load existing database from localStorage
+            // Always check localStorage first for user data
+            const savedWorkers = localStorage.getItem('workers');
+            const savedFeedback = localStorage.getItem('feedback');
+            
+            if (savedWorkers && savedFeedback) {
+                // Load from localStorage (more reliable)
+                console.log('✅ Loading data from localStorage');
+                this.fallbackToLocalStorage();
+                return;
+            }
+            
+            // Try to load SQLite binary data
             const savedData = localStorage.getItem('workers_db_sqlite');
             if (savedData) {
                 try {
@@ -46,7 +73,7 @@ class WorkersDatabase {
                     this.db = new SQL.Database(uint8Array);
                     console.log('✅ Loaded existing SQLite database from storage');
                 } catch (e) {
-                    console.log('⚠️ Failed to load saved database, creating new one');
+                    console.log('⚠️ Failed to load saved SQLite database, creating new one');
                     this.db = new SQL.Database();
                     await this.createTables();
                     await this.insertSampleData();
@@ -59,6 +86,8 @@ class WorkersDatabase {
             }
             
             this.isLocalStorage = false;
+            // Immediately save to localStorage as backup
+            this.saveToStorage();
         } catch (error) {
             console.error('❌ SQL.js initialization failed:', error);
             throw error;
@@ -67,41 +96,44 @@ class WorkersDatabase {
 
     // Fallback to localStorage if SQLite fails
     fallbackToLocalStorage() {
-        console.log('🔄 Falling back to localStorage...');
+        console.log('🔄 Using localStorage mode...');
         this.isLocalStorage = true;
         
+        // Load existing data or create with samples
+        const existingWorkers = localStorage.getItem('workers');
+        const existingFeedback = localStorage.getItem('feedback');
+        
         this.db = {
-            workers: JSON.parse(localStorage.getItem('workers') || '[]'),
-            feedback: JSON.parse(localStorage.getItem('feedback') || '[]')
+            workers: existingWorkers ? JSON.parse(existingWorkers) : this.getSampleWorkers(),
+            feedback: existingFeedback ? JSON.parse(existingFeedback) : []
         };
         
-        // Initialize with sample data if empty
-        if (this.db.workers.length === 0) {
-            this.db.workers = this.getSampleWorkers();
-            this.saveToLocalStorage();
-        }
-        
+        // Save immediately to ensure persistence
+        this.saveToLocalStorage();
         this.isInitialized = true;
-        console.log('✅ localStorage fallback initialized');
+        console.log('✅ localStorage mode initialized with', this.db.workers.length, 'workers');
     }
 
     // Save SQLite database to localStorage
     saveToStorage() {
         try {
             if (!this.isLocalStorage && this.db) {
+                // Save SQLite binary data
                 const data = this.db.export();
                 localStorage.setItem('workers_db_sqlite', JSON.stringify(Array.from(data)));
 
-                // Also persist a JSON mirror so fallback mode can load user data
+                // Create JSON mirror for fallback reliability
                 try {
                     const workersResult = this.db.exec("SELECT * FROM workers");
                     const feedbackResult = this.db.exec("SELECT * FROM feedback");
                     const workersJson = workersResult.length > 0 ? this.formatExportData(workersResult[0]) : [];
                     const feedbackJson = feedbackResult.length > 0 ? this.formatExportData(feedbackResult[0]) : [];
+                    
                     localStorage.setItem('workers', JSON.stringify(workersJson));
                     localStorage.setItem('feedback', JSON.stringify(feedbackJson));
+                    console.log('💾 Data saved to storage successfully');
                 } catch (mirrorError) {
-                    console.warn('⚠️ Failed to write JSON mirror for fallback:', mirrorError);
+                    console.warn('⚠️ Failed to write JSON mirror:', mirrorError);
                 }
             } else if (this.isLocalStorage) {
                 this.saveToLocalStorage();
@@ -116,6 +148,7 @@ class WorkersDatabase {
         if (this.isLocalStorage) {
             localStorage.setItem('workers', JSON.stringify(this.db.workers));
             localStorage.setItem('feedback', JSON.stringify(this.db.feedback));
+            console.log('💾 Data saved to localStorage:', this.db.workers.length, 'workers');
         }
     }
 
@@ -155,7 +188,6 @@ class WorkersDatabase {
 
         try {
             this.db.exec(schema);
-            this.saveToStorage();
             console.log('✅ Database tables created successfully');
         } catch (error) {
             console.error('❌ Error creating tables:', error);
@@ -174,7 +206,6 @@ class WorkersDatabase {
                 console.warn('⚠️ Sample worker already exists:', worker.name);
             }
         }
-        this.saveToStorage();
     }
 
     // Get sample workers data
@@ -228,7 +259,12 @@ class WorkersDatabase {
                 throw new Error('Phone number already registered');
             }
 
-            return await this.addWorkerDirect(workerData);
+            const result = await this.addWorkerDirect(workerData);
+            
+            // Force save immediately after adding
+            this.saveToStorage();
+            
+            return result;
         } catch (error) {
             console.error('❌ Error adding worker:', error);
             throw error;
@@ -240,15 +276,17 @@ class WorkersDatabase {
         try {
             if (this.isLocalStorage) {
                 const newWorker = {
-                    id: Date.now(),
+                    id: Date.now() + Math.floor(Math.random() * 1000), // Ensure unique ID
                     ...workerData,
                     rating: workerData.rating || 0,
                     total_ratings: workerData.total_ratings || 0,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 };
+                
                 this.db.workers.push(newWorker);
                 this.saveToLocalStorage();
+                console.log('✅ Worker added to localStorage:', newWorker.name);
                 return newWorker;
             }
 
@@ -272,10 +310,13 @@ class WorkersDatabase {
             const insertId = result[0].values[0][0];
             stmt.free();
             
+            // Force save immediately
             this.saveToStorage();
             
             // Get the newly inserted worker
-            return await this.getWorkerById(insertId);
+            const newWorker = await this.getWorkerById(insertId);
+            console.log('✅ Worker added to SQLite:', newWorker.name);
+            return newWorker;
         } catch (error) {
             console.error('❌ Error adding worker directly:', error);
             throw error;
@@ -333,7 +374,7 @@ class WorkersDatabase {
         try {
             if (this.isLocalStorage) {
                 const feedback = {
-                    id: Date.now(),
+                    id: Date.now() + Math.floor(Math.random() * 1000),
                     worker_id: workerId,
                     rating: rating,
                     comment: comment,
@@ -354,6 +395,7 @@ class WorkersDatabase {
                 }
                 
                 this.saveToLocalStorage();
+                console.log('✅ Feedback added to localStorage');
                 return feedback;
             }
 
@@ -365,11 +407,11 @@ class WorkersDatabase {
             stmt.run([workerId, rating, comment]);
             stmt.free();
             
-            // Update worker rating manually since triggers might not work
+            // Update worker rating
             await this.updateWorkerRating(workerId);
             this.saveToStorage();
             
-            console.log('✅ Feedback added successfully');
+            console.log('✅ Feedback added to SQLite');
             return true;
         } catch (error) {
             console.error('❌ Error adding feedback:', error);
@@ -449,10 +491,11 @@ class WorkersDatabase {
                 this.db.feedback = this.db.feedback.filter(f => f.worker_id != workerId);
                 this.db.workers = this.db.workers.filter(w => w.id != workerId);
                 this.saveToLocalStorage();
+                console.log('✅ Worker deleted from localStorage');
                 return true;
             }
 
-            // Explicitly delete feedback first, then worker
+            // Delete feedback first, then worker
             const delFeedback = this.db.prepare("DELETE FROM feedback WHERE worker_id = ?");
             delFeedback.run([workerId]);
             delFeedback.free();
@@ -462,7 +505,7 @@ class WorkersDatabase {
             delWorker.free();
 
             this.saveToStorage();
-            console.log('✅ Worker deleted successfully');
+            console.log('✅ Worker deleted from SQLite');
             return true;
         } catch (error) {
             console.error('❌ Error deleting worker:', error);
@@ -576,9 +619,11 @@ class WorkersDatabase {
             if (this.db && !this.isLocalStorage) {
                 this.saveToStorage();
                 this.db.close();
+            } else if (this.isLocalStorage) {
+                this.saveToLocalStorage();
             }
             this.isInitialized = false;
-            console.log('✅ Database connection closed');
+            console.log('✅ Database connection closed and data saved');
         } catch (error) {
             console.error('❌ Error closing database:', error);
         }

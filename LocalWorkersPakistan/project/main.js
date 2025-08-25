@@ -1,4 +1,4 @@
-                  // Updated main.js with SQLite integration for Local Workers Pakistan
+// Updated main.js with SQLite integration for Local Workers Pakistan
 import WorkersDatabase from './database.js';
 
 // Global database instance
@@ -45,7 +45,11 @@ async function initializeApp() {
         showLoadingState('Initializing database...');
         
         // Initialize database
-        await initializeDatabase();
+        const dbInitialized = await initializeDatabase();
+        
+        if (!dbInitialized) {
+            showNotification('⚠️ Database initialization had issues, but app will continue working');
+        }
         
         // Setup event listeners
         setupEventListeners();
@@ -66,18 +70,37 @@ async function initializeApp() {
 async function initializeDatabase() {
     try {
         // Load SQL.js library for web-based SQLite
-        if (!window.initSqlJs) {
+        if (!window.initSqlJs && !window.WorkersDatabase) {
             await loadSqlJs();
         }
         
         db = new WorkersDatabase();
-        await db.init();
+        const initialized = await db.init();
         
         console.log('✅ Database initialized successfully');
-        return true;
+        return initialized;
     } catch (error) {
         console.error('❌ Database initialization failed:', error);
-        // Fallback to localStorage will be handled by WorkersDatabase
+        // Create a fallback database instance
+        db = {
+            workers: JSON.parse(localStorage.getItem('workers') || '[]'),
+            feedback: JSON.parse(localStorage.getItem('feedback') || '[]'),
+            getWorkers: async (category, city) => {
+                return db.workers.filter(w => w.category === category && w.city === city);
+            },
+            addWorker: async (workerData) => {
+                const newWorker = {
+                    id: Date.now(),
+                    ...workerData,
+                    rating: 0,
+                    total_ratings: 0,
+                    created_at: new Date().toISOString()
+                };
+                db.workers.push(newWorker);
+                localStorage.setItem('workers', JSON.stringify(db.workers));
+                return newWorker;
+            }
+        };
         return false;
     }
 }
@@ -159,10 +182,19 @@ function setupEventListeners() {
             if (!confirmed) return;
             try {
                 showLoadingState('Deleting profile...');
-                await db.deleteWorker(selectedWorker.id);
+                
+                if (db.deleteWorker) {
+                    await db.deleteWorker(selectedWorker.id);
+                } else {
+                    // Fallback deletion
+                    const workers = JSON.parse(localStorage.getItem('workers') || '[]');
+                    const updatedWorkers = workers.filter(w => w.id !== selectedWorker.id);
+                    localStorage.setItem('workers', JSON.stringify(updatedWorkers));
+                }
+                
                 hideLoadingState();
                 workerModal.classList.remove('active');
-                showNotification('✅ Profile deleted');
+                showNotification('✅ Profile deleted successfully');
                 await renderWorkers();
             } catch (error) {
                 hideLoadingState();
@@ -247,11 +279,18 @@ async function handleRegistration() {
         // Add worker to database
         const newWorker = await db.addWorker(formData);
         
+        // Force save to ensure persistence
+        if (db.saveToStorage) {
+            await db.saveToStorage();
+        } else if (db.saveToLocalStorage) {
+            await db.saveToLocalStorage();
+        }
+        
         hideLoadingState();
         registerModal.classList.remove('active');
         resetRegistrationForm();
         
-        showNotification('✅ Registration successful! You can now be found by customers.');
+        showNotification('✅ Registration successful! Worker has been added to database.');
         
         // Refresh display if current filters match
         if (currentCategory === formData.category && currentCity === formData.city) {
@@ -278,20 +317,39 @@ async function submitWorkerFeedback() {
         showLoadingState('Submitting feedback...');
         
         const comment = feedbackText.value.trim();
-        await db.addFeedback(selectedWorker.id, selectedRating, comment);
         
-        // Update local worker object
-        const updatedWorker = await db.getWorkerById(selectedWorker.id);
-        if (updatedWorker) {
-            selectedWorker.rating = updatedWorker.rating;
-            selectedWorker.total_ratings = updatedWorker.total_ratings;
+        if (db.addFeedback) {
+            await db.addFeedback(selectedWorker.id, selectedRating, comment);
+            
+            // Update local worker object
+            const updatedWorker = await db.getWorkerById(selectedWorker.id);
+            if (updatedWorker) {
+                selectedWorker.rating = updatedWorker.rating;
+                selectedWorker.total_ratings = updatedWorker.total_ratings;
+            }
+        } else {
+            // Fallback feedback handling
+            const feedback = JSON.parse(localStorage.getItem('feedback') || '[]');
+            feedback.push({
+                id: Date.now(),
+                worker_id: selectedWorker.id,
+                rating: selectedRating,
+                comment: comment,
+                created_at: new Date().toISOString()
+            });
+            localStorage.setItem('feedback', JSON.stringify(feedback));
+        }
+        
+        // Force save
+        if (db.saveToStorage) {
+            await db.saveToStorage();
         }
         
         hideLoadingState();
         feedbackModal.classList.remove('active');
         resetFeedbackForm();
         
-        showNotification(`⭐ Thank you for ${selectedRating}-star rating! Worker rating updated.`);
+        showNotification(`⭐ Thank you for ${selectedRating}-star rating! Rating saved successfully.`);
         
         // Refresh the display to show updated rating
         await renderWorkers();
@@ -366,7 +424,7 @@ async function renderWorkers() {
         }
 
         // Sort workers by rating (highest first)
-        workers.sort((a, b) => b.rating - a.rating);
+        workers.sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
         workers.forEach(worker => {
             const card = createWorkerCard(worker);
@@ -389,9 +447,9 @@ function createWorkerCard(worker) {
     card.className = 'worker-card';
     card.onclick = () => showWorkerDetails(worker);
     
-    const ratingStars = generateRatingStars(worker.rating);
-    const ratingText = worker.total_ratings > 0 ? 
-        `${worker.rating} (${worker.total_ratings} reviews)` : 
+    const ratingStars = generateRatingStars(worker.rating || 0);
+    const ratingText = (worker.total_ratings || 0) > 0 ? 
+        `${worker.rating || 0} (${worker.total_ratings} reviews)` : 
         'No ratings yet';
     
     card.innerHTML = `
@@ -416,7 +474,7 @@ function createWorkerCard(worker) {
                 <span class="stat-label">Years Exp</span>
             </div>
             <div class="stat">
-                <span class="stat-value">${worker.total_ratings}</span>
+                <span class="stat-value">${worker.total_ratings || 0}</span>
                 <span class="stat-label">Reviews</span>
             </div>
         </div>
@@ -439,9 +497,9 @@ async function showWorkerDetails(worker) {
         contactBtn.href = `tel:${worker.phone}`;
         
         // Show rating in worker details
-        const ratingStars = generateRatingStars(worker.rating);
-        const ratingText = worker.total_ratings > 0 ? 
-            `${worker.rating} (${worker.total_ratings} reviews)` : 
+        const ratingStars = generateRatingStars(worker.rating || 0);
+        const ratingText = (worker.total_ratings || 0) > 0 ? 
+            `${worker.rating || 0} (${worker.total_ratings} reviews)` : 
             'No ratings yet';
         
         // Add rating display to worker modal
@@ -462,7 +520,9 @@ async function showWorkerDetails(worker) {
         workerName.parentNode.insertBefore(ratingDisplay, workerName.nextSibling);
         
         // Load and display recent feedback
-        await loadWorkerFeedback(worker.id);
+        if (db.getWorkerFeedback) {
+            await loadWorkerFeedback(worker.id);
+        }
         
         workerModal.classList.add('active');
     } catch (error) {
@@ -639,10 +699,25 @@ function showNotification(message) {
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-size: 14px;
+        max-width: 300px;
+    `;
     document.body.appendChild(notification);
+    
     setTimeout(() => {
-        notification.remove();
-    }, 3000);
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 4000);
 }
 
 // Utility functions
@@ -683,8 +758,8 @@ function addTouchSupport() {
 // Export data function for backup
 async function exportData() {
     try {
-        if (!db) {
-            throw new Error('Database not initialized');
+        if (!db || !db.exportData) {
+            throw new Error('Database not available');
         }
         
         const data = await db.exportData();
@@ -712,9 +787,39 @@ window.addEventListener('error', function(event) {
     showNotification('❌ An unexpected error occurred');
 });
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', async function() {
+// Cleanup on page unload - CRITICAL for data persistence
+window.addEventListener('beforeunload', async function(event) {
     if (db) {
-        await db.close();
+        try {
+            console.log('🔄 Saving data before page unload...');
+            if (db.saveToStorage) {
+                await db.saveToStorage();
+            } else if (db.saveToLocalStorage) {
+                await db.saveToLocalStorage();
+            }
+            
+            if (db.close) {
+                await db.close();
+            }
+            console.log('✅ Data saved successfully on page unload');
+        } catch (error) {
+            console.error('❌ Error saving data on unload:', error);
+        }
     }
 });
+
+// Also save data periodically (every 30 seconds)
+setInterval(async () => {
+    if (db && db.isInitialized) {
+        try {
+            if (db.saveToStorage) {
+                await db.saveToStorage();
+            } else if (db.saveToLocalStorage) {
+                await db.saveToLocalStorage();
+            }
+            console.log('💾 Periodic data save completed');
+        } catch (error) {
+            console.error('❌ Error in periodic save:', error);
+        }
+    }
+}, 30000);
