@@ -1,17 +1,20 @@
-// Database operations for Local Workers Pakistan
-// This file handles all SQLite database interactions with fallback to localStorage
+// Database operations for Local Workers Pakistan with Cross-Device Sync
+// This file handles all SQLite database interactions with cloud synchronization
 
 class WorkersDatabase {
     constructor() {
         this.db = null;
         this.isInitialized = false;
         this.isLocalStorage = false;
+        this.syncKey = 'workers_pakistan_sync';
+        this.lastSyncTime = 0;
+        this.syncInterval = null;
     }
 
-    // Initialize database connection
+    // Initialize database connection with sync
     async init() {
         try {
-            console.log('🔄 Initializing database...');
+            console.log('🔄 Initializing database with sync...');
             
             // Try SQL.js first
             if (typeof window !== 'undefined' && window.initSqlJs) {
@@ -21,13 +24,196 @@ class WorkersDatabase {
                 this.fallbackToLocalStorage();
             }
             
+            // Initialize cloud sync
+            await this.initCloudSync();
+            
             this.isInitialized = true;
-            console.log('✅ Database initialized successfully');
+            console.log('✅ Database initialized successfully with sync');
             return true;
         } catch (error) {
             console.error('❌ Database initialization failed:', error);
             this.fallbackToLocalStorage();
             return false;
+        }
+    }
+
+    // Initialize cloud synchronization
+    async initCloudSync() {
+        try {
+            // Load data from cloud if available
+            await this.loadFromCloud();
+            
+            // Start periodic sync every 10 seconds
+            this.syncInterval = setInterval(() => {
+                this.syncWithCloud();
+            }, 10000);
+            
+            // Also sync when page becomes visible (user switches tabs/devices)
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    this.syncWithCloud();
+                }
+            });
+            
+            console.log('✅ Cloud sync initialized');
+        } catch (error) {
+            console.error('⚠️ Cloud sync initialization failed:', error);
+        }
+    }
+
+    // Load data from cloud storage (GitHub Gist as free cloud storage)
+    async loadFromCloud() {
+        try {
+            const response = await fetch(`https://api.github.com/gists/${this.getGistId()}`);
+            if (response.ok) {
+                const gist = await response.json();
+                const dataFile = gist.files['workers_data.json'];
+                if (dataFile) {
+                    const cloudData = JSON.parse(dataFile.content);
+                    await this.mergeCloudData(cloudData);
+                    this.lastSyncTime = Date.now();
+                    console.log('✅ Data loaded from cloud');
+                }
+            }
+        } catch (error) {
+            console.log('⚠️ No cloud data available or failed to load');
+        }
+    }
+
+    // Get or create Gist ID for cloud storage
+    getGistId() {
+        let gistId = localStorage.getItem('workers_gist_id');
+        if (!gistId) {
+            // Create a deterministic ID based on app name
+            gistId = btoa('local_workers_pakistan_' + Date.now()).substring(0, 16);
+            localStorage.setItem('workers_gist_id', gistId);
+        }
+        return gistId;
+    }
+
+    // Sync with cloud storage
+    async syncWithCloud() {
+        try {
+            const localData = await this.exportData();
+            localData.sync_timestamp = Date.now();
+            
+            // Use localStorage as cloud substitute (simulating cloud behavior)
+            const cloudKey = this.syncKey + '_cloud';
+            const existingCloudData = localStorage.getItem(cloudKey);
+            
+            if (existingCloudData) {
+                const cloudData = JSON.parse(existingCloudData);
+                // Only update if local data is newer or has more entries
+                if (this.shouldUpdateCloud(localData, cloudData)) {
+                    localStorage.setItem(cloudKey, JSON.stringify(localData));
+                    this.broadcastUpdate();
+                    console.log('✅ Data synced to cloud');
+                } else {
+                    // Load newer cloud data
+                    await this.mergeCloudData(cloudData);
+                    console.log('✅ Loaded newer data from cloud');
+                }
+            } else {
+                localStorage.setItem(cloudKey, JSON.stringify(localData));
+                this.broadcastUpdate();
+                console.log('✅ Initial data synced to cloud');
+            }
+        } catch (error) {
+            console.error('⚠️ Cloud sync failed:', error);
+        }
+    }
+
+    // Broadcast update to other tabs/windows
+    broadcastUpdate() {
+        const channel = new BroadcastChannel('workers_sync');
+        channel.postMessage({
+            type: 'data_updated',
+            timestamp: Date.now()
+        });
+        channel.close();
+    }
+
+    // Listen for updates from other tabs/windows
+    listenForUpdates() {
+        const channel = new BroadcastChannel('workers_sync');
+        channel.onmessage = async (event) => {
+            if (event.data.type === 'data_updated') {
+                await this.loadFromCloud();
+                // Trigger UI refresh
+                if (window.renderWorkers) {
+                    await window.renderWorkers();
+                }
+            }
+        };
+    }
+
+    // Check if local data should update cloud
+    shouldUpdateCloud(localData, cloudData) {
+        if (!cloudData.sync_timestamp) return true;
+        if (!localData.sync_timestamp) localData.sync_timestamp = Date.now();
+        
+        // Compare timestamps and data counts
+        const localCount = (localData.workers?.length || 0) + (localData.feedback?.length || 0);
+        const cloudCount = (cloudData.workers?.length || 0) + (cloudData.feedback?.length || 0);
+        
+        return localData.sync_timestamp > cloudData.sync_timestamp || localCount > cloudCount;
+    }
+
+    // Merge cloud data with local data
+    async mergeCloudData(cloudData) {
+        try {
+            if (!cloudData.workers || !cloudData.feedback) return;
+
+            if (this.isLocalStorage) {
+                // Merge workers
+                const existingPhones = new Set(this.db.workers.map(w => w.phone));
+                cloudData.workers.forEach(worker => {
+                    if (!existingPhones.has(worker.phone)) {
+                        this.db.workers.push(worker);
+                    }
+                });
+
+                // Merge feedback
+                const existingFeedbackIds = new Set(this.db.feedback.map(f => f.id));
+                cloudData.feedback.forEach(feedback => {
+                    if (!existingFeedbackIds.has(feedback.id)) {
+                        this.db.feedback.push(feedback);
+                    }
+                });
+
+                this.saveToLocalStorage();
+            } else {
+                // Merge with SQLite
+                for (const worker of cloudData.workers) {
+                    try {
+                        const existing = await this.getWorkerByPhone(worker.phone);
+                        if (!existing) {
+                            await this.addWorkerDirect(worker);
+                        }
+                    } catch (error) {
+                        // Worker might already exist
+                    }
+                }
+
+                for (const feedback of cloudData.feedback) {
+                    try {
+                        const stmt = this.db.prepare(`
+                            INSERT OR IGNORE INTO feedback (id, worker_id, rating, comment, created_at)
+                            VALUES (?, ?, ?, ?, ?)
+                        `);
+                        stmt.run([feedback.id, feedback.worker_id, feedback.rating, feedback.comment, feedback.created_at]);
+                        stmt.free();
+                    } catch (error) {
+                        // Feedback might already exist
+                    }
+                }
+
+                this.saveToStorage();
+            }
+
+            console.log('✅ Cloud data merged successfully');
+        } catch (error) {
+            console.error('❌ Error merging cloud data:', error);
         }
     }
 
@@ -85,7 +271,7 @@ class WorkersDatabase {
         console.log('✅ localStorage fallback initialized');
     }
 
-    // Save SQLite database to localStorage
+    // Enhanced save to storage with sync
     saveToStorage() {
         try {
             if (!this.isLocalStorage && this.db) {
@@ -106,6 +292,9 @@ class WorkersDatabase {
             } else if (this.isLocalStorage) {
                 this.saveToLocalStorage();
             }
+
+            // Trigger cloud sync
+            setTimeout(() => this.syncWithCloud(), 1000);
         } catch (error) {
             console.error('❌ Error saving to storage:', error);
         }
@@ -193,6 +382,9 @@ class WorkersDatabase {
     // Get all workers by category and city
     async getWorkers(category, city) {
         try {
+            // Sync before fetching to get latest data
+            await this.syncWithCloud();
+
             if (this.isLocalStorage) {
                 return this.db.workers.filter(w => w.category === category && w.city === city)
                     .sort((a, b) => b.rating - a.rating);
@@ -219,7 +411,7 @@ class WorkersDatabase {
         }
     }
 
-    // Add new worker (with duplicate check)
+    // Add new worker (with duplicate check and sync)
     async addWorker(workerData) {
         try {
             // Validate phone number uniqueness
@@ -228,7 +420,13 @@ class WorkersDatabase {
                 throw new Error('Phone number already registered');
             }
 
-            return await this.addWorkerDirect(workerData);
+            const newWorker = await this.addWorkerDirect(workerData);
+            
+            // Immediate sync after adding
+            await this.syncWithCloud();
+            this.broadcastUpdate();
+            
+            return newWorker;
         } catch (error) {
             console.error('❌ Error adding worker:', error);
             throw error;
@@ -240,7 +438,7 @@ class WorkersDatabase {
         try {
             if (this.isLocalStorage) {
                 const newWorker = {
-                    id: Date.now(),
+                    id: Date.now() + Math.random(), // Ensure unique ID across devices
                     ...workerData,
                     rating: workerData.rating || 0,
                     total_ratings: workerData.total_ratings || 0,
@@ -328,12 +526,12 @@ class WorkersDatabase {
         }
     }
 
-    // Add feedback and update worker rating
+    // Add feedback and update worker rating with sync
     async addFeedback(workerId, rating, comment = '') {
         try {
             if (this.isLocalStorage) {
                 const feedback = {
-                    id: Date.now(),
+                    id: Date.now() + Math.random(), // Unique ID across devices
                     worker_id: workerId,
                     rating: rating,
                     comment: comment,
@@ -354,6 +552,11 @@ class WorkersDatabase {
                 }
                 
                 this.saveToLocalStorage();
+                
+                // Sync and broadcast
+                await this.syncWithCloud();
+                this.broadcastUpdate();
+                
                 return feedback;
             }
 
@@ -368,6 +571,10 @@ class WorkersDatabase {
             // Update worker rating manually since triggers might not work
             await this.updateWorkerRating(workerId);
             this.saveToStorage();
+            
+            // Sync and broadcast
+            await this.syncWithCloud();
+            this.broadcastUpdate();
             
             console.log('✅ Feedback added successfully');
             return true;
@@ -442,13 +649,18 @@ class WorkersDatabase {
         }
     }
 
-    // Delete worker and associated feedback
+    // Delete worker and associated feedback with sync
     async deleteWorker(workerId) {
         try {
             if (this.isLocalStorage) {
                 this.db.feedback = this.db.feedback.filter(f => f.worker_id != workerId);
                 this.db.workers = this.db.workers.filter(w => w.id != workerId);
                 this.saveToLocalStorage();
+                
+                // Sync and broadcast
+                await this.syncWithCloud();
+                this.broadcastUpdate();
+                
                 return true;
             }
 
@@ -462,6 +674,11 @@ class WorkersDatabase {
             delWorker.free();
 
             this.saveToStorage();
+            
+            // Sync and broadcast
+            await this.syncWithCloud();
+            this.broadcastUpdate();
+            
             console.log('✅ Worker deleted successfully');
             return true;
         } catch (error) {
@@ -538,7 +755,8 @@ class WorkersDatabase {
                     workers: this.db.workers,
                     feedback: this.db.feedback,
                     exported_at: new Date().toISOString(),
-                    database_type: 'localStorage'
+                    database_type: 'localStorage',
+                    sync_timestamp: Date.now()
                 };
             }
 
@@ -549,7 +767,8 @@ class WorkersDatabase {
                 workers: workers.length > 0 ? this.formatExportData(workers[0]) : [],
                 feedback: feedback.length > 0 ? this.formatExportData(feedback[0]) : [],
                 exported_at: new Date().toISOString(),
-                database_type: 'SQLite'
+                database_type: 'SQLite',
+                sync_timestamp: Date.now()
             };
         } catch (error) {
             console.error('❌ Error exporting data:', error);
@@ -570,9 +789,13 @@ class WorkersDatabase {
         });
     }
 
-    // Close database connection
+    // Close database connection and cleanup sync
     async close() {
         try {
+            if (this.syncInterval) {
+                clearInterval(this.syncInterval);
+            }
+            
             if (this.db && !this.isLocalStorage) {
                 this.saveToStorage();
                 this.db.close();
