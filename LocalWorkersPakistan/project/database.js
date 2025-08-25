@@ -1,6 +1,3 @@
-// Database operations for Local Workers Pakistan
-// This file handles all SQLite database interactions with fallback to localStorage
-
 class WorkersDatabase {
     constructor() {
         this.db = null;
@@ -13,11 +10,8 @@ class WorkersDatabase {
         try {
             console.log('🔄 Initializing database...');
             
-            // Always try localStorage first for better reliability
-            if (this.hasExistingData()) {
-                console.log('📦 Found existing data, using localStorage mode');
-                this.fallbackToLocalStorage();
-            } else if (typeof window !== 'undefined' && window.initSqlJs) {
+            // Check if SQLite is available
+            if (typeof window !== 'undefined' && window.initSqlJs) {
                 try {
                     await this.initSqlJs();
                 } catch (sqlError) {
@@ -40,13 +34,6 @@ class WorkersDatabase {
         }
     }
 
-    // Check if existing data exists in localStorage
-    hasExistingData() {
-        const workers = localStorage.getItem('workers');
-        const feedback = localStorage.getItem('feedback');
-        return workers && workers !== '[]' && JSON.parse(workers).length > 0;
-    }
-
     // Initialize SQL.js
     async initSqlJs() {
         try {
@@ -54,18 +41,7 @@ class WorkersDatabase {
                 locateFile: file => `https://sql.js.org/dist/${file}`
             });
             
-            // Always check localStorage first for user data
-            const savedWorkers = localStorage.getItem('workers');
-            const savedFeedback = localStorage.getItem('feedback');
-            
-            if (savedWorkers && savedFeedback) {
-                // Load from localStorage (more reliable)
-                console.log('✅ Loading data from localStorage');
-                this.fallbackToLocalStorage();
-                return;
-            }
-            
-            // Try to load SQLite binary data
+            // Try to load SQLite binary data from localStorage
             const savedData = localStorage.getItem('workers_db_sqlite');
             if (savedData) {
                 try {
@@ -73,7 +49,7 @@ class WorkersDatabase {
                     this.db = new SQL.Database(uint8Array);
                     console.log('✅ Loaded existing SQLite database from storage');
                 } catch (e) {
-                    console.log('⚠️ Failed to load saved SQLite database, creating new one');
+                    console.warn('⚠️ Failed to load saved SQLite database, creating new one:', e);
                     this.db = new SQL.Database();
                     await this.createTables();
                     await this.insertSampleData();
@@ -86,7 +62,7 @@ class WorkersDatabase {
             }
             
             this.isLocalStorage = false;
-            // Immediately save to localStorage as backup
+            // Save immediately to ensure persistence
             this.saveToStorage();
         } catch (error) {
             console.error('❌ SQL.js initialization failed:', error);
@@ -104,13 +80,12 @@ class WorkersDatabase {
         const existingFeedback = localStorage.getItem('feedback');
         
         this.db = {
-            workers: existingWorkers ? JSON.parse(existingWorkers) : this.getSampleWorkers(),
-            feedback: existingFeedback ? JSON.parse(existingFeedback) : []
+            workers: existingWorkers && existingWorkers !== '[]' ? JSON.parse(existingWorkers) : this.getSampleWorkers(),
+            feedback: existingFeedback && existingFeedback !== '[]' ? JSON.parse(existingFeedback) : []
         };
         
         // Save immediately to ensure persistence
         this.saveToLocalStorage();
-        this.isInitialized = true;
         console.log('✅ localStorage mode initialized with', this.db.workers.length, 'workers');
     }
 
@@ -121,8 +96,9 @@ class WorkersDatabase {
                 // Save SQLite binary data
                 const data = this.db.export();
                 localStorage.setItem('workers_db_sqlite', JSON.stringify(Array.from(data)));
+                console.log('💾 SQLite binary data saved to localStorage');
 
-                // Create JSON mirror for fallback reliability
+                // Create JSON mirror for reliability
                 try {
                     const workersResult = this.db.exec("SELECT * FROM workers");
                     const feedbackResult = this.db.exec("SELECT * FROM feedback");
@@ -131,7 +107,7 @@ class WorkersDatabase {
                     
                     localStorage.setItem('workers', JSON.stringify(workersJson));
                     localStorage.setItem('feedback', JSON.stringify(feedbackJson));
-                    console.log('💾 Data saved to storage successfully');
+                    console.log('💾 JSON mirror saved to localStorage');
                 } catch (mirrorError) {
                     console.warn('⚠️ Failed to write JSON mirror:', mirrorError);
                 }
@@ -146,9 +122,13 @@ class WorkersDatabase {
     // Save data to localStorage (fallback mode)
     saveToLocalStorage() {
         if (this.isLocalStorage) {
-            localStorage.setItem('workers', JSON.stringify(this.db.workers));
-            localStorage.setItem('feedback', JSON.stringify(this.db.feedback));
-            console.log('💾 Data saved to localStorage:', this.db.workers.length, 'workers');
+            try {
+                localStorage.setItem('workers', JSON.stringify(this.db.workers));
+                localStorage.setItem('feedback', JSON.stringify(this.db.feedback));
+                console.log('💾 Data saved to localStorage:', this.db.workers.length, 'workers');
+            } catch (error) {
+                console.error('❌ Error saving to localStorage:', error);
+            }
         }
     }
 
@@ -206,18 +186,20 @@ class WorkersDatabase {
                 console.warn('⚠️ Sample worker already exists:', worker.name);
             }
         }
+        // Save after inserting sample data
+        this.saveToStorage();
     }
 
     // Get sample workers data
     getSampleWorkers() {
         return [
-            {name: 'Ahmed Ali', age: 32, experience: 8, phone: '03001234567', category: 'plumber', city: 'Karachi', rating: 4.5, total_ratings: 12},
-            {name: 'Hassan Khan', age: 28, experience: 5, phone: '03012345678', category: 'plumber', city: 'Lahore', rating: 4.2, total_ratings: 8},
-            {name: 'Tariq Shah', age: 35, experience: 12, phone: '03123456789', category: 'plumber', city: 'Faisalabad', rating: 4.8, total_ratings: 15},
-            {name: 'Khalil Rehman', age: 29, experience: 6, phone: '03456789012', category: 'welder', city: 'Karachi', rating: 4.4, total_ratings: 9},
-            {name: 'Shahid Malik', age: 34, experience: 10, phone: '03567890123', category: 'welder', city: 'Lahore', rating: 4.7, total_ratings: 11},
-            {name: 'Jameel Ahmad', age: 36, experience: 14, phone: '03901234567', category: 'carpenter', city: 'Karachi', rating: 4.9, total_ratings: 18},
-            {name: 'Saleem Khan', age: 30, experience: 7, phone: '03012345679', category: 'carpenter', city: 'Lahore', rating: 4.4, total_ratings: 7}
+            { id: Date.now() + 1, name: 'Ahmed Ali', age: 32, experience: 8, phone: '03001234567', category: 'plumber', city: 'Karachi', rating: 4.5, total_ratings: 12, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+            { id: Date.now() + 2, name: 'Hassan Khan', age: 28, experience: 5, phone: '03012345678', category: 'plumber', city: 'Lahore', rating: 4.2, total_ratings: 8, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+            { id: Date.now() + 3, name: 'Tariq Shah', age: 35, experience: 12, phone: '03123456789', category: 'plumber', city: 'Faisalabad', rating: 4.8, total_ratings: 15, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+            { id: Date.now() + 4, name: 'Khalil Rehman', age: 29, experience: 6, phone: '03456789012', category: 'welder', city: 'Karachi', rating: 4.4, total_ratings: 9, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+            { id: Date.now() + 5, name: 'Shahid Malik', age: 34, experience: 10, phone: '03567890123', category: 'welder', city: 'Lahore', rating: 4.7, total_ratings: 11, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+            { id: Date.now() + 6, name: 'Jameel Ahmad', age: 36, experience: 14, phone: '03901234567', category: 'carpenter', city: 'Karachi', rating: 4.9, total_ratings: 18, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+            { id: Date.now() + 7, name: 'Saleem Khan', age: 30, experience: 7, phone: '03012345679', category: 'carpenter', city: 'Lahore', rating: 4.4, total_ratings: 7, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
         ];
     }
 
@@ -225,8 +207,9 @@ class WorkersDatabase {
     async getWorkers(category, city) {
         try {
             if (this.isLocalStorage) {
-                return this.db.workers.filter(w => w.category === category && w.city === city)
-                    .sort((a, b) => b.rating - a.rating);
+                return this.db.workers
+                    .filter(w => w.category === category && w.city === city)
+                    .sort((a, b) => (b.rating || 0) - (a.rating || 0));
             }
 
             const stmt = this.db.prepare(`
@@ -271,12 +254,12 @@ class WorkersDatabase {
         }
     }
 
-    // Add worker directly (used for sample data)
+    // Add worker directly (used for sample data and new workers)
     async addWorkerDirect(workerData) {
         try {
             if (this.isLocalStorage) {
                 const newWorker = {
-                    id: Date.now() + Math.floor(Math.random() * 1000), // Ensure unique ID
+                    id: Date.now() + Math.floor(Math.random() * 1000),
                     ...workerData,
                     rating: workerData.rating || 0,
                     total_ratings: workerData.total_ratings || 0,
@@ -291,8 +274,8 @@ class WorkersDatabase {
             }
 
             const stmt = this.db.prepare(`
-                INSERT INTO workers (name, age, experience, phone, category, city, rating, total_ratings)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO workers (name, age, experience, phone, category, city, rating, total_ratings, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             `);
             
             stmt.run([
@@ -310,7 +293,7 @@ class WorkersDatabase {
             const insertId = result[0].values[0][0];
             stmt.free();
             
-            // Force save immediately
+            // Save immediately to localStorage
             this.saveToStorage();
             
             // Get the newly inserted worker
@@ -385,7 +368,9 @@ class WorkersDatabase {
                 
                 // Update worker rating
                 const workerFeedback = this.db.feedback.filter(f => f.worker_id == workerId);
-                const avgRating = workerFeedback.reduce((sum, f) => sum + f.rating, 0) / workerFeedback.length;
+                const avgRating = workerFeedback.length > 0 
+                    ? workerFeedback.reduce((sum, f) => sum + f.rating, 0) / workerFeedback.length 
+                    : 0;
                 
                 const worker = this.db.workers.find(w => w.id == workerId);
                 if (worker) {
@@ -400,8 +385,8 @@ class WorkersDatabase {
             }
 
             const stmt = this.db.prepare(`
-                INSERT INTO feedback (worker_id, rating, comment)
-                VALUES (?, ?, ?)
+                INSERT INTO feedback (worker_id, rating, comment, created_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
             `);
             
             stmt.run([workerId, rating, comment]);
@@ -409,10 +394,12 @@ class WorkersDatabase {
             
             // Update worker rating
             await this.updateWorkerRating(workerId);
+            
+            // Save immediately to localStorage
             this.saveToStorage();
             
             console.log('✅ Feedback added to SQLite');
-            return true;
+            return { worker_id: workerId, rating, comment, created_at: new Date().toISOString() };
         } catch (error) {
             console.error('❌ Error adding feedback:', error);
             throw error;
@@ -450,6 +437,9 @@ class WorkersDatabase {
                 
                 updateStmt.free();
             }
+            
+            // Save after updating rating
+            this.saveToStorage();
         } catch (error) {
             console.error('❌ Error updating worker rating:', error);
         }
@@ -459,7 +449,8 @@ class WorkersDatabase {
     async getWorkerFeedback(workerId) {
         try {
             if (this.isLocalStorage) {
-                return this.db.feedback.filter(f => f.worker_id == workerId)
+                return this.db.feedback
+                    .filter(f => f.worker_id == workerId)
                     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             }
 
@@ -504,6 +495,7 @@ class WorkersDatabase {
             delWorker.run([workerId]);
             delWorker.free();
 
+            // Save immediately to localStorage
             this.saveToStorage();
             console.log('✅ Worker deleted from SQLite');
             return true;
@@ -539,8 +531,9 @@ class WorkersDatabase {
             if (this.isLocalStorage) {
                 const totalWorkers = this.db.workers.length;
                 const totalFeedback = this.db.feedback.length;
-                const avgRating = totalWorkers > 0 ? 
-                    this.db.workers.reduce((sum, w) => sum + w.rating, 0) / totalWorkers : 0;
+                const avgRating = totalWorkers > 0 
+                    ? this.db.workers.reduce((sum, w) => sum + (w.rating || 0), 0) / totalWorkers 
+                    : 0;
                 
                 return {
                     totalWorkers,

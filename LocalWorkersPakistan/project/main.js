@@ -1,4 +1,3 @@
-// Updated main.js with SQLite integration for Local Workers Pakistan
 import WorkersDatabase from './database.js';
 
 // Global database instance
@@ -44,6 +43,11 @@ async function initializeApp() {
     try {
         showLoadingState('Initializing database...');
         
+        // Load SQL.js library for web-based SQLite
+        if (!window.initSqlJs) {
+            await loadSqlJs();
+        }
+        
         // Initialize database
         const dbInitialized = await initializeDatabase();
         
@@ -69,13 +73,13 @@ async function initializeApp() {
 // Initialize database connection
 async function initializeDatabase() {
     try {
-        // Load SQL.js library for web-based SQLite
-        if (!window.initSqlJs && !window.WorkersDatabase) {
-            await loadSqlJs();
-        }
-        
         db = new WorkersDatabase();
         const initialized = await db.init();
+        
+        // Force save to ensure any initial data is persisted
+        if (db.saveToStorage) {
+            await db.saveToStorage();
+        }
         
         console.log('✅ Database initialized successfully');
         return initialized;
@@ -90,15 +94,57 @@ async function initializeDatabase() {
             },
             addWorker: async (workerData) => {
                 const newWorker = {
-                    id: Date.now(),
+                    id: Date.now() + Math.floor(Math.random() * 1000),
                     ...workerData,
                     rating: 0,
                     total_ratings: 0,
-                    created_at: new Date().toISOString()
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                 };
                 db.workers.push(newWorker);
                 localStorage.setItem('workers', JSON.stringify(db.workers));
                 return newWorker;
+            },
+            getWorkerById: async (id) => {
+                return db.workers.find(w => w.id == id) || null;
+            },
+            getWorkerByPhone: async (phone) => {
+                return db.workers.find(w => w.phone === phone) || null;
+            },
+            addFeedback: async (workerId, rating, comment = '') => {
+                const feedback = {
+                    id: Date.now() + Math.floor(Math.random() * 1000),
+                    worker_id: workerId,
+                    rating: rating,
+                    comment: comment,
+                    created_at: new Date().toISOString()
+                };
+                db.feedback.push(feedback);
+                // Update worker rating
+                const workerFeedback = db.feedback.filter(f => f.worker_id == workerId);
+                const avgRating = workerFeedback.length > 0 
+                    ? workerFeedback.reduce((sum, f) => sum + f.rating, 0) / workerFeedback.length 
+                    : 0;
+                const worker = db.workers.find(w => w.id == workerId);
+                if (worker) {
+                    worker.rating = Math.round(avgRating * 10) / 10;
+                    worker.total_ratings = workerFeedback.length;
+                    worker.updated_at = new Date().toISOString();
+                }
+                localStorage.setItem('feedback', JSON.stringify(db.feedback));
+                localStorage.setItem('workers', JSON.stringify(db.workers));
+                return feedback;
+            },
+            getWorkerFeedback: async (workerId) => {
+                return db.feedback.filter(f => f.worker_id == workerId)
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            },
+            deleteWorker: async (workerId) => {
+                db.feedback = db.feedback.filter(f => f.worker_id != workerId);
+                db.workers = db.workers.filter(w => w.id != workerId);
+                localStorage.setItem('workers', JSON.stringify(db.workers));
+                localStorage.setItem('feedback', JSON.stringify(db.feedback));
+                return true;
             }
         };
         return false;
@@ -110,8 +156,14 @@ async function loadSqlJs() {
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = 'https://sql.js.org/dist/sql-wasm.js';
-        script.onload = resolve;
-        script.onerror = reject;
+        script.onload = () => {
+            console.log('✅ SQL.js loaded successfully');
+            resolve();
+        };
+        script.onerror = (error) => {
+            console.error('❌ Failed to load SQL.js:', error);
+            reject(error);
+        };
         document.head.appendChild(script);
     });
 }
@@ -183,13 +235,11 @@ function setupEventListeners() {
             try {
                 showLoadingState('Deleting profile...');
                 
-                if (db.deleteWorker) {
-                    await db.deleteWorker(selectedWorker.id);
-                } else {
-                    // Fallback deletion
-                    const workers = JSON.parse(localStorage.getItem('workers') || '[]');
-                    const updatedWorkers = workers.filter(w => w.id !== selectedWorker.id);
-                    localStorage.setItem('workers', JSON.stringify(updatedWorkers));
+                await db.deleteWorker(selectedWorker.id);
+                
+                // Force save to ensure persistence
+                if (db.saveToStorage) {
+                    await db.saveToStorage();
                 }
                 
                 hideLoadingState();
@@ -282,8 +332,6 @@ async function handleRegistration() {
         // Force save to ensure persistence
         if (db.saveToStorage) {
             await db.saveToStorage();
-        } else if (db.saveToLocalStorage) {
-            await db.saveToLocalStorage();
         }
         
         hideLoadingState();
@@ -318,29 +366,16 @@ async function submitWorkerFeedback() {
         
         const comment = feedbackText.value.trim();
         
-        if (db.addFeedback) {
-            await db.addFeedback(selectedWorker.id, selectedRating, comment);
-            
-            // Update local worker object
-            const updatedWorker = await db.getWorkerById(selectedWorker.id);
-            if (updatedWorker) {
-                selectedWorker.rating = updatedWorker.rating;
-                selectedWorker.total_ratings = updatedWorker.total_ratings;
-            }
-        } else {
-            // Fallback feedback handling
-            const feedback = JSON.parse(localStorage.getItem('feedback') || '[]');
-            feedback.push({
-                id: Date.now(),
-                worker_id: selectedWorker.id,
-                rating: selectedRating,
-                comment: comment,
-                created_at: new Date().toISOString()
-            });
-            localStorage.setItem('feedback', JSON.stringify(feedback));
+        await db.addFeedback(selectedWorker.id, selectedRating, comment);
+        
+        // Update local worker object
+        const updatedWorker = await db.getWorkerById(selectedWorker.id);
+        if (updatedWorker) {
+            selectedWorker.rating = updatedWorker.rating;
+            selectedWorker.total_ratings = updatedWorker.total_ratings;
         }
         
-        // Force save
+        // Force save to ensure persistence
         if (db.saveToStorage) {
             await db.saveToStorage();
         }
@@ -448,9 +483,9 @@ function createWorkerCard(worker) {
     card.onclick = () => showWorkerDetails(worker);
     
     const ratingStars = generateRatingStars(worker.rating || 0);
-    const ratingText = (worker.total_ratings || 0) > 0 ? 
-        `${worker.rating || 0} (${worker.total_ratings} reviews)` : 
-        'No ratings yet';
+    const ratingText = (worker.total_ratings || 0) > 0 
+        ? `${worker.rating} (${worker.total_ratings} reviews)` 
+        : 'No ratings yet';
     
     card.innerHTML = `
         <div class="worker-header">
@@ -498,9 +533,9 @@ async function showWorkerDetails(worker) {
         
         // Show rating in worker details
         const ratingStars = generateRatingStars(worker.rating || 0);
-        const ratingText = (worker.total_ratings || 0) > 0 ? 
-            `${worker.rating || 0} (${worker.total_ratings} reviews)` : 
-            'No ratings yet';
+        const ratingText = (worker.total_ratings || 0) > 0 
+            ? `${worker.rating} (${worker.total_ratings} reviews)` 
+            : 'No ratings yet';
         
         // Add rating display to worker modal
         const ratingDisplay = document.createElement('div');
@@ -520,9 +555,7 @@ async function showWorkerDetails(worker) {
         workerName.parentNode.insertBefore(ratingDisplay, workerName.nextSibling);
         
         // Load and display recent feedback
-        if (db.getWorkerFeedback) {
-            await loadWorkerFeedback(worker.id);
-        }
+        await loadWorkerFeedback(worker.id);
         
         workerModal.classList.add('active');
     } catch (error) {
@@ -732,7 +765,6 @@ function formatDate(dateString) {
 
 // Add touch support for mobile devices
 function addTouchSupport() {
-    // Add touch feedback to buttons
     const buttons = document.querySelectorAll('button, .worker-card, .tab-btn');
     buttons.forEach(button => {
         button.addEventListener('touchstart', function() {
@@ -787,8 +819,8 @@ window.addEventListener('error', function(event) {
     showNotification('❌ An unexpected error occurred');
 });
 
-// Cleanup on page unload - CRITICAL for data persistence
-window.addEventListener('beforeunload', async function(event) {
+// Cleanup on page unload
+window.addEventListener('beforeunload', async function() {
     if (db) {
         try {
             console.log('🔄 Saving data before page unload...');
@@ -797,7 +829,6 @@ window.addEventListener('beforeunload', async function(event) {
             } else if (db.saveToLocalStorage) {
                 await db.saveToLocalStorage();
             }
-            
             if (db.close) {
                 await db.close();
             }
@@ -808,7 +839,7 @@ window.addEventListener('beforeunload', async function(event) {
     }
 });
 
-// Also save data periodically (every 30 seconds)
+// Periodic save (every 30 seconds)
 setInterval(async () => {
     if (db && db.isInitialized) {
         try {
